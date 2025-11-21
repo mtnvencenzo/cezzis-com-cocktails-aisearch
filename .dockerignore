@@ -1,0 +1,54 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+
+# Environment files (security - don't include in images)
+.env
+.env.*
+*.env
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+test/
+*_test.py
+test_*.py
+requirements-dev.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+
+# Docker
+.dockerignore
+
+# CI/CD
+.github/
+
+# Linting
+.ruff_cache/
+.ruff.toml
+pytest.ini
+
+# Logs
+*.log
+
+# Makefile
+makefile

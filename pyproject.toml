@@ -1,0 +1,62 @@
+[project]
+name = "cezzis_com_cocktails_aisearch"
+version = "0.0.1"
+description = "The cezzis rag data extraction agent is designed as the first step in text embedding the cezzis.com data.  This agent receives the raw cocktail data in json format then attempts to clean it and pass it to the next agent."
+authors = [
+    {name = "mtnvencenzo",email = "rvecchi@gmail.com"}
+]
+license = {text = "MIT"}
+readme = "README.md"
+requires-python = ">=3.12,<3.15"
+dependencies = [
+    "pydantic-settings (>=2.11.0)",
+    "cezzis-otel (>=0.0.4)",
+    "langchain-core (>=1.0.4,<2.0.0)",
+    "langchain (>=1.0.5,<2.0.0)",
+    "httpx (>=0.28.1,<0.29.0)",
+    "langfuse (==3.10.0)",
+    "langchain-huggingface (>=1.0.1,<2.0.0)",
+    "numpy (>=2.3.5,<3.0.0)",
+    "langchain-qdrant (>=1.1.0,<2.0.0)",
+    "fastapi[standard] (>=0.121.3,<0.122.0)",
+]
+
+[tool.poetry]
+exclude = [
+    "**/test_*.py", # Excludes files starting with 'test_'
+    "**/*_test.py", # Excludes files ending with '_test.py'
+    "**/tests/**/*.py", # Excludes all .py files within 'tests' directories
+    "**/test/**/*.py", # Excludes all .py files within 'tests' directories
+    "**/tests", # Excludes the 'tests' directory itself
+    "**/test", # Excludes the 'tests' directory itself
+    "**/*test*.py", # More general pattern to exclude any .py file with 'test' in its name
+]
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "pytest (>=8.4.2,<9.0.0)",
+    "pytest-cov (>=4.0.0,<6.0.0)",
+    "pytest-mock (>=3.15.1,<4.0.0)",
+    "ruff (>=0.14.3,<0.15.0)",
+    "mypy (>=1.18.2,<2.0.0)"
+]
+
+[tool.pyright]
+# Allow accessing private members in test files
+reportPrivateUsage = "none"
+# More specific: only disable for test directory
+exclude = []
+ignore = []
+
+# Alternative: Configure per-directory rules
+[[tool.pyright.executionEnvironments]]
+root = "test"
+reportPrivateUsage = "none"
+
+[[tool.pyright.executionEnvironments]]
+root = "."
+reportPrivateUsage = "warning"

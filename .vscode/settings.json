@@ -1,3 +1,57 @@
 {
-    "dotnet.defaultSolution": "disable"
+    "dotnet.defaultSolution": "disable",
+    "makefile.configureOnOpen": false,
+    "rest-client.enableTelemetry": false,
+    "yaml.schemas": {
+        "https://raw.githubusercontent.com/GitTools/GitVersion/main/schemas/6.3/GitVersion.json": "GitVersion.yml"
+    },
+    "explorer.fileNesting.enabled": true,
+    "explorer.fileNesting.patterns": {
+      "*.py": "$(capture).py.http, $(capture)_test.py, $(capture).pyi, test_$(capture).py,",
+      "requirements.txt": "requirements-*.txt"
+    },
+    "files.watcherExclude": {
+        "**/.git/objects/**": true,
+        "**/.git/subtree-cache/**": true,
+        "**/node_modules/**": true,
+        "**/.venv/**": true,
+        "**/py-env/**": true,
+        "**/.pytest_cache/**": true,
+        "**/.ruff_cache/**": true
+    },
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/.venv": true,
+        "**/py-env": true,
+        "**/__pycache__": true,
+        "**/.pytest_cache": true,
+        "**/.ruff_cache": true
+    },
+    "python-envs.defaultEnvManager": "ms-python.python:venv",
+    // "python.defaultInterpreterPath": ".venv/Scripts/python.exe", // Adjust path for macOS/Linux if needed
+    // "python.terminal.activateEnvironment": true,
+    "python-envs.pythonProjects": [
+        {
+            "path": "",
+            "envManager": "ms-python.python:venv",
+            "packageManager": "ms-python.python:pip"
+        }
+    ],
+    "python.testing.pytestArgs": [
+        "data_ingestion_agentic_workflow"
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    // "[python]": {
+    //     "editor.formatOnSave": true,
+    //     "editor.defaultFormatter": "charliermarsh.ruff",
+    //     "editor.codeActionsOnSave": {
+    //         "source.fixAll.ruff": "explicit",
+    //         "source.organizeImports.ruff": "explicit"
+    //     }
+    // }
 }
