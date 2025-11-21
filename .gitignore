@@ -67,3 +67,12 @@ node_modules/
 
 #Dapr
 /**/.dapr/logs/
+
+# Local environment files
+**/.env.local
+
+# Python virtual host environments
+/**/.venv/
+**/pytest-results.xml
+**/coverage.xml
+**/dist/*

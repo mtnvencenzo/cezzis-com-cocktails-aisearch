@@ -1,0 +1,92 @@
+name: cicd-cezzis-cocktails-aisearch
+
+on:
+  pull_request:
+    branches: [main]
+    paths: [
+      src/cezzis_com_cocktails_aisearch/**,
+      test/**,
+      .github/workflows/cezzis-cocktails-aisearch-cicd.yaml
+    ]
+  push:
+    branches: [main]
+    paths: [
+      src/cezzis_com_cocktails_aisearch/**,
+      test/**,
+      .github/workflows/cezzis-cocktails-aisearch-cicd.yaml
+    ]
+
+  workflow_dispatch:
+
+jobs:
+  gitVersion:
+    name: Git version
+    permissions: 
+      contents: read
+    runs-on: ubuntu-latest
+    outputs:
+      semVer: ${{ steps.gitVersion.outputs.MajorMinorPatch }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with: 
+          fetch-depth: 0
+      
+      - name: Install GetVersion
+        uses: gittools/actions/gitversion/setup@v4.2.0
+        with:
+          versionSpec: "6.x"
+
+      - name: Use GitVersion
+        id: gitVersion
+        uses: gittools/actions/gitversion/execute@v4.2.0
+        with:
+          configFilePath: ./GitVersion.yml
+
+  build:
+    name: Build and test
+    needs: [gitVersion]
+    uses: mtnvencenzo/workflows/.github/workflows/py-build.yaml@main
+    with:
+      python_version: '3.12.3'
+      working_directory: './src/cezzis_com_cocktails_aisearch'
+      cache_dependencies: false
+      ruff_config: '.ruff.toml'
+      pytest_args: '-v test/unit -v test/integration'
+      coverage_source: 'src/cezzis_com_cocktails_aisearch'
+      upload_artifact: true
+      artifact_name: 'cezzis_com_cocktails_aisearch'
+      unpack_filename: 'cezzis_com_cocktails_aisearch-${{ needs.gitVersion.outputs.semVer }}.tar.gz'
+      unpack_directory: './cezzis_com_cocktails_aisearch-${{ needs.gitVersion.outputs.semVer }}'
+      setup_files: '["./Dockerfile", "./README.md", "./poetry.lock", "./pyproject.toml", "./.dockerignore"]'
+      version: ${{ needs.gitVersion.outputs.semVer }}
+      generate_stubs: false
+
+  docker:
+    name: Containerize app
+    needs: [build, gitVersion]
+    uses: mtnvencenzo/workflows/.github/workflows/docker-build-and-push.yaml@main
+    with:
+      working_directory: './src/cezzis_com_cocktails_aisearch'
+      allow_build_and_push: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref_name == 'main' }}
+      artifact_name: 'cezzis_com_cocktails_aisearch'
+      docker_file_name: 'Dockerfile'
+      image_tags: '${{ github.sha }},${{ needs.gitVersion.outputs.semVer }},latest'
+      acr_registry_login_server: 'acrveceusgloshared001.azurecr.io'
+      acr_image_repository: 'cezziscomcocktailsaisearch'
+    secrets:
+      acr_registry_login_username: ${{ secrets.ACR_REGISTRY_USERNAME }}
+      acr_registry_login_password: ${{ secrets.ACR_REGISTRY_PASSWORD }}
+
+  create_release_prd:
+    name: Create release
+    if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref_name == 'main' }}
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    needs: [docker, gitVersion]
+    steps:
+      - name: Create release
+        uses: mtnvencenzo/workflows/.github/actions/create-release@main
+        with:
+          version: ${{ needs.gitVersion.outputs.semVer }}
