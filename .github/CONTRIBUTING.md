@@ -46,8 +46,8 @@ This repository contains the backend API for:
 
 1. **Fork and Clone the Repository**
    ```bash
-   git clone https://github.com/mtnvencenzo/cezzis-com-cocktails-rag-agent.git
-   cd cezzis-com-cocktails-rag-agent
+   git clone https://github.com/mtnvencenzo/cezzis-com-cocktails-aisearch.git
+   cd cezzis-com-cocktails-aisearch
    ```
 
 5. **Docker Compose (Optional)**
