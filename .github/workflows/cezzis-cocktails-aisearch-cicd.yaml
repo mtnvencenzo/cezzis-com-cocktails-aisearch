@@ -52,8 +52,8 @@ jobs:
       working_directory: './src/cezzis_com_cocktails_aisearch'
       cache_dependencies: false
       ruff_config: '.ruff.toml'
-      pytest_args: '-v test/unit -v test/integration'
-      coverage_source: 'src/cezzis_com_cocktails_aisearch'
+      pytest_args: '-v test/'
+      coverage_source: 'src/cezzis_com_cocktails_aisearch /test'
       upload_artifact: true
       artifact_name: 'cezzis_com_cocktails_aisearch'
       unpack_filename: 'cezzis_com_cocktails_aisearch-${{ needs.gitVersion.outputs.semVer }}.tar.gz'
