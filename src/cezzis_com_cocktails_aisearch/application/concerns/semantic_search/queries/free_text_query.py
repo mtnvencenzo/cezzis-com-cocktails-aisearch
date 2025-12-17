@@ -1,8 +1,10 @@
-from mediatr import Mediator, GenericQuery
+from mediatr import GenericQuery, Mediator
+
 
 class FreeTextQuery(GenericQuery[str]):
     def __init__(self, text: str):
         self.text = text
+
 
 @Mediator.handler
 class FreeTextQueryHandler:

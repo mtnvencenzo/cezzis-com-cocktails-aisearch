@@ -1,5 +1,5 @@
+from injector import Binder, Module, singleton
 
-from injector import singleton, Binder, Module
 
 class AppModule(Module):
     def configure(self, binder: Binder):

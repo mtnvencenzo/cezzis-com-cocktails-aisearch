@@ -1,8 +1,9 @@
+from fastapi import APIRouter
 from injector import inject
 from mediatr import Mediator
-from fastapi import APIRouter
 
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.queries.free_text_query import FreeTextQuery
+
 
 class SemanticSearchRouter(APIRouter):
     @inject
@@ -16,4 +17,3 @@ class SemanticSearchRouter(APIRouter):
         result = await self.mediator.send_async(query)
 
         return {"message": result}
-

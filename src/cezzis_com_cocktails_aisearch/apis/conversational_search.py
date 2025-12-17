@@ -1,8 +1,9 @@
+from fastapi import APIRouter
 from injector import inject
 from mediatr import Mediator
-from fastapi import APIRouter
 
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.queries.free_text_query import FreeTextQuery
+
 
 class ConverstionalSearchRouter(APIRouter):
     @inject
