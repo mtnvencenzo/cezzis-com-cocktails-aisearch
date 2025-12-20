@@ -4,7 +4,7 @@
         {
             "label": "OpenApiRoot",
             "type": "shell",
-            "command": "xdg-open http://localhost:8000",
+            "command": "xdg-open http://localhost:8011",
             "problemMatcher": []
         }
     ]

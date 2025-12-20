@@ -24,7 +24,7 @@ assignees: ''
 ---
 <!-- List the concrete conditions that must be met for this story to be complete. -->
 - [ ] API service can be started with `poetry run uvicorn src.cezzis_com_cocktails_aisearch.main:app --reload` and becomes healthy
-- [ ] Service is accessible on documented ports (default: 8000)
+- [ ] Service is accessible on documented ports (default: 8010)
 - [ ] Configuration and usage are documented in README
 - [ ] API endpoints or search examples are provided
 

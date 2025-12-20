@@ -32,7 +32,7 @@ RUN pip install --no-cache-dir --disable-pip-version-check *.tar.gz && rm *.tar.
 # Set Python to run in unbuffered mode for better logging
 ENV PYTHONUNBUFFERED=1
 
-EXPOSE 8000
+EXPOSE 8010
 
 # Run the application using the installed package
-CMD ["uvicorn", "cezzis_com_cocktails_aisearch.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "cezzis_com_cocktails_aisearch.main:app", "--host", "0.0.0.0", "--port", "8010"]

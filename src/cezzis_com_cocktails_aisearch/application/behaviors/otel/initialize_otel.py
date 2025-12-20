@@ -28,9 +28,9 @@ def initialize_opentelemetry() -> None:
             service_version=version("cezzis_com_cocktails_aisearch"),
             environment=os.environ.get("ENV", "unknown"),
             instance_id=socket.gethostname(),
-            enable_logging=True,
-            enable_tracing=True,
-            enable_console_logging=True,
+            enable_logging=otel_options.enable_logging,
+            enable_tracing=otel_options.enable_tracing,
+            enable_console_logging=otel_options.enable_console_logging,
         ),
         configure_tracing=lambda _: (
             RequestsInstrumentor().instrument(),
