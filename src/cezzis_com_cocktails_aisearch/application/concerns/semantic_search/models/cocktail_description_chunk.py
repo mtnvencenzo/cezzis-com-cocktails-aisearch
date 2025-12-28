@@ -1,7 +1,6 @@
-import dataclasses
 from dataclasses import dataclass
-from typing import List
 from uuid import NAMESPACE_DNS, uuid5
+
 
 @dataclass
 class CocktailDescriptionChunk:
@@ -14,4 +13,3 @@ class CocktailDescriptionChunk:
 
     def to_uuid(self) -> str:
         return str(uuid5(NAMESPACE_DNS, f"{self.category}-{self.content}"))
-

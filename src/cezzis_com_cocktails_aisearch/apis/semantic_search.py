@@ -21,17 +21,20 @@ class SemanticSearchRouter(APIRouter):
         query = FreeTextQuery("Show me cocktails with honey and lemon")
         items = await self.mediator.send_async(query)
 
-        cocktails = [CocktailModel(
-            id=item[0],
-            title="test",
-            descriptiveTitle="test",
-            rating=0,
-            ingredients=[],
-            isIba=False,
-            serves=0,
-            prepTimeMinutes=0,
-            searchTiles=[],
-            glassware=[]
-        ) for item in items]
+        cocktails = [
+            CocktailModel(
+                id=item[0],
+                title="test",
+                descriptiveTitle="test",
+                rating=0,
+                ingredients=[],
+                isIba=False,
+                serves=0,
+                prepTimeMinutes=0,
+                searchTiles=[],
+                glassware=[],
+            )
+            for item in items
+        ]
 
         return CocktailsRs(items=cocktails)

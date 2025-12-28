@@ -1,8 +1,12 @@
 from typing import List
+
 from pydantic import BaseModel
 
-from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.glassware_type_model import GlasswareTypeModel
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.glassware_type_model import (
+    GlasswareTypeModel,
+)
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.ingredient_model import IngredientModel
+
 
 class CocktailModel(BaseModel):
     id: str

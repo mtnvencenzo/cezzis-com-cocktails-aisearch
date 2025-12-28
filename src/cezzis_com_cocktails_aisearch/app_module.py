@@ -1,15 +1,19 @@
-from mediatr import Mediator
 from injector import Binder, Injector, Module, singleton
+from mediatr import Mediator
 from qdrant_client import QdrantClient
+
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.queries import FreeTextQueryHandler
 from cezzis_com_cocktails_aisearch.domain.config import QdrantOptions, get_qdrant_options
 from cezzis_com_cocktails_aisearch.domain.config.hugging_face_options import HuggingFaceOptions, get_huggingface_options
 
+
 def create_injector() -> Injector:
     return Injector([AppModule()])
 
+
 def mediator_manager(handler_class, is_behavior=False):
     return injector.get(handler_class)
+
 
 class AppModule(Module):
     def configure(self, binder: Binder):
@@ -28,5 +32,6 @@ class AppModule(Module):
         binder.bind(QdrantOptions, get_qdrant_options, scope=singleton)
         binder.bind(QdrantClient, qdrant_client, scope=singleton)
         binder.bind(FreeTextQueryHandler, FreeTextQueryHandler, scope=singleton)
+
 
 injector = create_injector()

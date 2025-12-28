@@ -1,10 +1,10 @@
 from cezzis_com_cocktails_aisearch.domain.config import (
-    OTelOptions,
-    get_otel_options,
-    QdrantOptions,
-    get_qdrant_options,
     HuggingFaceOptions,
+    OTelOptions,
+    QdrantOptions,
     get_huggingface_options,
+    get_otel_options,
+    get_qdrant_options,
 )
 
 __all__ = [

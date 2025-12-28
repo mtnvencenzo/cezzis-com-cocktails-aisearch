@@ -1,6 +1,6 @@
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.queries import (
     FreeTextQuery,
-    FreeTextQueryHandler
+    FreeTextQueryHandler,
 )
 
 __all__ = [

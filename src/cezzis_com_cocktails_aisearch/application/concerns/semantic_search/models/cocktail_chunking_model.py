@@ -1,9 +1,10 @@
 import dataclasses
 from dataclasses import dataclass
 from typing import List
-from uuid import NAMESPACE_DNS, uuid5
 
-from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_description_chunk import CocktailDescriptionChunk
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_description_chunk import (
+    CocktailDescriptionChunk,
+)
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailModel
 
 

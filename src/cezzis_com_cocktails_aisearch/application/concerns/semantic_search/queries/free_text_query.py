@@ -11,6 +11,7 @@ class FreeTextQuery(GenericQuery[list[tuple[str, float]]]):
     def __init__(self, text: str):
         self.text = text
 
+
 @Mediator.behavior
 class FreeTextQueryValidator:
     def handle(self, command: FreeTextQuery, next) -> None:
@@ -24,10 +25,7 @@ class FreeTextQueryValidator:
 class FreeTextQueryHandler:
     @inject
     def __init__(
-        self,
-        hugging_face_options: HuggingFaceOptions,
-        qdrant_client: QdrantClient,
-        qdrant_options: QdrantOptions
+        self, hugging_face_options: HuggingFaceOptions, qdrant_client: QdrantClient, qdrant_options: QdrantOptions
     ):
         self.hugging_face_options = hugging_face_options
         self.qdrant_client = qdrant_client
@@ -42,11 +40,11 @@ class FreeTextQueryHandler:
 
         query_vector = await hf_endpoint.aembed_query(command.text)
 
-        if (len(query_vector) == 0):
+        if len(query_vector) == 0:
             raise ValueError("Failed to generate embeddings for the provided text")
-        
+
         search_results = self.qdrant_client.query_points(
-            collection_name=self.qdrant_options.collection_name, # Replace with your collection name
+            collection_name=self.qdrant_options.collection_name,  # Replace with your collection name
             query=query_vector,
             limit=30,
             with_payload=True,

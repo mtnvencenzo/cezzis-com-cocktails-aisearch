@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class GlasswareTypeModel(str, Enum):
     None_ = "None"
     Rocks = "Rocks"
