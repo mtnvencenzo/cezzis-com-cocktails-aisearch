@@ -1,6 +1,6 @@
 from typing import List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.ingredient_requirment_type_model import (
     IngredientRequirementTypeModel,
@@ -16,12 +16,12 @@ from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.u
 
 # Ingredient model using the enum
 class IngredientModel(BaseModel):
-    name: str
-    uoM: UofMTypeModel
-    requirement: List[IngredientRequirementTypeModel]
-    display: str
-    units: float
-    preparation: PreparationTypeModel
-    suggestions: str
-    types: List[IngredientTypeModel]
-    applications: List[str]
+    name: str = Field(..., description="Name of the ingredient")
+    uoM: UofMTypeModel = Field(..., description="Unit of Measure for the ingredient")
+    requirement: List[IngredientRequirementTypeModel] = Field(..., description="List of ingredient requirement types")
+    display: str = Field(..., description="Display string for the ingredient")
+    units: float = Field(..., description="Quantity of the ingredient")
+    preparation: PreparationTypeModel = Field(..., description="Preparation type for the ingredient")
+    suggestions: str = Field(..., description="Suggestions for the ingredient")
+    types: List[IngredientTypeModel] = Field(..., description="List of ingredient types")
+    applications: List[str] = Field(..., description="List of applications for the ingredient")

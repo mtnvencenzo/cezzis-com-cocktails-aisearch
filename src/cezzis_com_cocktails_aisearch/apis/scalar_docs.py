@@ -13,6 +13,7 @@ class ScalarDocsRouter(APIRouter):
 
     async def scalar_html(self):
         return get_scalar_api_reference(
-            # Your OpenAPI document
-            openapi_url="/openapi.json"
+            openapi_url="/openapi.json",
+            scalar_favicon_url="/static/favicon.svg",
+            title="Cezzi's Cocktails AI Search Api",
         )

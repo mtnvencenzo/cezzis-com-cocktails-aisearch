@@ -1,23 +1,40 @@
+from typing import Optional
+
 from injector import inject
 from langchain_huggingface.embeddings import HuggingFaceEndpointEmbeddings
 from mediatr import GenericQuery, Mediator
 from qdrant_client import QdrantClient
 
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_data_include_model import (
+    CocktailDataIncludeModel,
+)
 from cezzis_com_cocktails_aisearch.domain.config.hugging_face_options import HuggingFaceOptions
 from cezzis_com_cocktails_aisearch.domain.config.qdrant_options import QdrantOptions
 
 
 class FreeTextQuery(GenericQuery[list[tuple[str, float]]]):
-    def __init__(self, text: str):
-        self.text = text
+    def __init__(
+        self,
+        free_text: Optional[str] = "",
+        skip: Optional[int] = 0,
+        take: Optional[int] = 10,
+        match: Optional[list[str]] = [],
+        match_exclusive: Optional[bool] = False,
+        include: Optional[list[CocktailDataIncludeModel]] = [],
+        filters: Optional[list[str]] = [],
+    ):
+        self.free_text = free_text
+        self.skip = skip
+        self.take = take
+        self.match = match
+        self.match_exclusive = match_exclusive
+        self.include = include
+        self.filters = filters
 
 
 @Mediator.behavior
 class FreeTextQueryValidator:
     def handle(self, command: FreeTextQuery, next) -> None:
-        if not command.text:
-            raise ValueError("Invalid text provided for free text query")
-
         return next()
 
 
@@ -38,7 +55,7 @@ class FreeTextQueryHandler:
             task="feature-extraction",
         )
 
-        query_vector = await hf_endpoint.aembed_query(command.text)
+        query_vector = await hf_endpoint.aembed_query(command.free_text or "")
 
         if len(query_vector) == 0:
             raise ValueError("Failed to generate embeddings for the provided text")

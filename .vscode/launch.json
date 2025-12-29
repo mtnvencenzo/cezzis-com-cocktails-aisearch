@@ -20,7 +20,7 @@
                 "serverReadyAction": {
                     "action": "openExternally",
                     "pattern": "INFO:     Uvicorn running on (http://127\\.0\\.0\\.1:[0-9]+) \\(Press CTRL\\+C to quit\\)",
-                    "uriFormat": "%s/docs"
+                    "uriFormat": "%s/scalar/v1"
                 }
             }
         ]
