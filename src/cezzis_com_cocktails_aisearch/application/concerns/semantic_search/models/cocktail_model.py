@@ -12,7 +12,7 @@ class CocktailModel(BaseModel):
     id: str = Field(..., description="Unique identifier for the cocktail")
     title: str = Field(..., description="Title of the cocktail")
     descriptiveTitle: str = Field(..., description="Descriptive title of the cocktail")
-    rating: int = Field(..., description="Rating of the cocktail")
+    rating: float = Field(..., description="Rating of the cocktail")
     ingredients: List[IngredientModel] = Field(..., description="List of ingredients in the cocktail")
     isIba: bool = Field(..., description="Indicates if the cocktail is an IBA official cocktail")
     serves: int = Field(..., description="Number of servings")
