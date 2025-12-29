@@ -3,7 +3,7 @@ from typing import List
 from pydantic import BaseModel, Field
 
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.ingredient_application_type_model import (
-    IngredientApplicationModel,
+    IngredientApplicationTypeModel,
 )
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.ingredient_requirment_type_model import (
     IngredientRequirementTypeModel,
@@ -27,4 +27,4 @@ class IngredientModel(BaseModel):
     preparation: PreparationTypeModel = Field(..., description="Preparation type for the ingredient")
     suggestions: str = Field(..., description="Suggestions for the ingredient")
     types: List[IngredientTypeModel] = Field(..., description="List of ingredient types")
-    applications: List[IngredientApplicationModel] = Field(..., description="List of ingredient applications")
+    applications: List[IngredientApplicationTypeModel] = Field(..., description="List of ingredient applications")
