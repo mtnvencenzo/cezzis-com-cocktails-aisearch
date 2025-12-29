@@ -28,6 +28,7 @@ WORKDIR /app
 # Copy and install the built package efficiently
 COPY --from=builder /app/src/dist/*.tar.gz ./
 RUN pip install --no-cache-dir --disable-pip-version-check *.tar.gz && rm *.tar.gz
+COPY ./src/cezzis_com_cocktails_aisearch/static ./static
 
 # Set Python to run in unbuffered mode for better logging
 ENV PYTHONUNBUFFERED=1
