@@ -104,6 +104,7 @@ class CocktailEmbeddingCommandHandler:
                     "cocktail_id": command.cocktail_model.id,
                     "category": chunk.category,
                     "description": chunk.content,
+                    "model": command.cocktail_model.model_dump_json(),
                 }
                 for chunk in chunks_to_embed
             ],
