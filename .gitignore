@@ -69,7 +69,7 @@ node_modules/
 /**/.dapr/logs/
 
 # Local environment files
-**/.env.local
+**/.env.*
 
 # Python virtual host environments
 /**/.venv/

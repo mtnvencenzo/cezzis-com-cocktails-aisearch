@@ -10,9 +10,11 @@ class ConverstionalSearchRouter(APIRouter):
     def __init__(self, mediator: Mediator):
         super().__init__()
         self.mediator = mediator
-        self.add_api_route("/v1/cocktails/conversation", self.search, methods=["GET"])
+        self.add_api_route("/v1/cocktails/chat", self.chat, methods=["GET"])
 
-    async def search(self):
+    async def chat(self):
+        """AI powered conversational search for cocktails."""
+
         query = FreeTextQuery("Show me cocktails with honey and lemon")
         result = await self.mediator.send_async(query)
 
