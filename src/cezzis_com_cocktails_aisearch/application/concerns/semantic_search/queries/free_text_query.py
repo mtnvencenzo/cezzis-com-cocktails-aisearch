@@ -73,7 +73,7 @@ class FreeTextQueryHandler:
         # Sort points by score descending
         sorted_points = sorted(search_results.points, key=lambda p: getattr(p, "score", 0), reverse=True)
         seen_ids = set()
-        
+
         for point in sorted_points:
             payload = point.payload if hasattr(point, "payload") else None
             if payload:

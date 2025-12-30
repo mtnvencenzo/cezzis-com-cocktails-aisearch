@@ -50,8 +50,6 @@ class SemanticSearchRouter(APIRouter):
             filters=fi or [],
         )
 
-        items = cast(
-            list[CocktailModel], await self.mediator.send_async(query)
-        )  # casting due to type hinting issues
+        items = cast(list[CocktailModel], await self.mediator.send_async(query))  # casting due to type hinting issues
 
         return CocktailsSearchRs(items=items)
