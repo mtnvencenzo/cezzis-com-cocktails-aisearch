@@ -8,6 +8,7 @@ from qdrant_client import QdrantClient
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_data_include_model import (
     CocktailDataIncludeModel,
 )
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailModel
 from cezzis_com_cocktails_aisearch.domain.config.hugging_face_options import HuggingFaceOptions
 from cezzis_com_cocktails_aisearch.domain.config.qdrant_options import QdrantOptions
 
@@ -48,7 +49,7 @@ class FreeTextQueryHandler:
         self.qdrant_client = qdrant_client
         self.qdrant_options = qdrant_options
 
-    async def handle(self, command: FreeTextQuery) -> list[tuple[str, float]]:
+    async def handle(self, command: FreeTextQuery) -> list[CocktailModel]:
         hf_endpoint = HuggingFaceEndpointEmbeddings(
             model=self.hugging_face_options.inference_model,  # http://localhost:8989 | sentence-transformers/all-mpnet-base-v2
             huggingfacehub_api_token=self.hugging_face_options.api_token,
@@ -67,11 +68,12 @@ class FreeTextQueryHandler:
             with_payload=True,
         )
 
+        cocktails: list[CocktailModel] = []
+
         # Sort points by score descending
         sorted_points = sorted(search_results.points, key=lambda p: getattr(p, "score", 0), reverse=True)
-
-        cocktailIds: list[tuple[str, float]] = []
         seen_ids = set()
+        
         for point in sorted_points:
             payload = point.payload if hasattr(point, "payload") else None
             if payload:
@@ -79,7 +81,8 @@ class FreeTextQueryHandler:
                 if metadata:
                     id = metadata.get("cocktail_id")
                     if id and id not in seen_ids:
-                        cocktailIds.append((id, point.score))
+                        cocktailModel: CocktailModel = CocktailModel.model_validate_json(metadata.get("model"))
+                        cocktails.append(cocktailModel)
                         seen_ids.add(id)
 
-        return cocktailIds
+        return cocktails

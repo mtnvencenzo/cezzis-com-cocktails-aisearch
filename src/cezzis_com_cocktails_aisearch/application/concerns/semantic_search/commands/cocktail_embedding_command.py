@@ -81,10 +81,14 @@ class CocktailEmbeddingCommandHandler:
             },
         )
 
-        self.qdrant_client.delete(
+        update_result = self.qdrant_client.delete(
+            wait=True,
             collection_name=self.qdrant_options.collection_name,
             points_selector=Filter(
-                must=[FieldCondition(key="cocktail_id", match=MatchValue(value=command.cocktail_model.id))]
+                should=[
+                    FieldCondition(key="cocktail_id", match=MatchValue(value=command.cocktail_model.id)),
+                    FieldCondition(key="metadata.cocktail_id", match=MatchValue(value=command.cocktail_model.id))
+                ]
             ),
         )
 

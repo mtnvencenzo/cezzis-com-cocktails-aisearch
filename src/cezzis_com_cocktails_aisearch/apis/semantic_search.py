@@ -51,23 +51,7 @@ class SemanticSearchRouter(APIRouter):
         )
 
         items = cast(
-            list[tuple[str, float]], await self.mediator.send_async(query)
+            list[CocktailModel], await self.mediator.send_async(query)
         )  # casting due to type hinting issues
 
-        cocktails = [
-            CocktailModel(
-                id=item[0],
-                title="test",
-                descriptiveTitle="test",
-                rating=0,
-                ingredients=[],
-                isIba=False,
-                serves=0,
-                prepTimeMinutes=0,
-                searchTiles=[],
-                glassware=[],
-            )
-            for item in items
-        ]
-
-        return CocktailsSearchRs(items=cocktails)
+        return CocktailsSearchRs(items=items)
