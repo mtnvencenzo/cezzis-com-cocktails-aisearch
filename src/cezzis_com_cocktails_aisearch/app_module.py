@@ -4,6 +4,7 @@ from qdrant_client import QdrantClient
 
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.queries import FreeTextQueryHandler
 from cezzis_com_cocktails_aisearch.domain.config import QdrantOptions, get_qdrant_options
+from cezzis_com_cocktails_aisearch.domain.config.app_options import AppOptions, get_app_options
 from cezzis_com_cocktails_aisearch.domain.config.hugging_face_options import HuggingFaceOptions, get_huggingface_options
 
 
@@ -28,8 +29,9 @@ class AppModule(Module):
         )
 
         binder.bind(Mediator, Mediator(handler_class_manager=mediator_manager), scope=singleton)
-        binder.bind(HuggingFaceOptions, get_huggingface_options, scope=singleton)
-        binder.bind(QdrantOptions, get_qdrant_options, scope=singleton)
+        binder.bind(AppOptions, get_app_options(), scope=singleton)
+        binder.bind(HuggingFaceOptions, get_huggingface_options(), scope=singleton)
+        binder.bind(QdrantOptions, get_qdrant_options(), scope=singleton)
         binder.bind(QdrantClient, qdrant_client, scope=singleton)
         binder.bind(FreeTextQueryHandler, FreeTextQueryHandler, scope=singleton)
 
