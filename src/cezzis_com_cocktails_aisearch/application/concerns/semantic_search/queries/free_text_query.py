@@ -9,6 +9,12 @@ from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.c
     CocktailDataIncludeModel,
 )
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailModel
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_search_statistics import (
+    CocktailSearchStatistics,
+)
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_vector_search_result import (
+    CocktailVectorSearchResult,
+)
 from cezzis_com_cocktails_aisearch.domain.config.hugging_face_options import HuggingFaceOptions
 from cezzis_com_cocktails_aisearch.domain.config.qdrant_options import QdrantOptions
 
@@ -62,9 +68,10 @@ class FreeTextQueryHandler:
             raise ValueError("Failed to generate embeddings for the provided text")
 
         search_results = self.qdrant_client.query_points(
-            collection_name=self.qdrant_options.collection_name,  # Replace with your collection name
+            collection_name=self.qdrant_options.collection_name,
+            limit=self.qdrant_options.semantic_search_limit,
+            score_threshold=self.qdrant_options.semantic_search_score_threshold,
             query=query_vector,
-            limit=30,
             with_payload=True,
         )
 
@@ -82,7 +89,38 @@ class FreeTextQueryHandler:
                     id = metadata.get("cocktail_id")
                     if id and id not in seen_ids:
                         cocktailModel: CocktailModel = CocktailModel.model_validate_json(metadata.get("model"))
+                        cocktailModel.search_statistics = CocktailSearchStatistics(
+                            total_score=getattr(point, "score", 0),
+                            hit_results=[CocktailVectorSearchResult(score=getattr(point, "score", 0))],
+                        )
                         cocktails.append(cocktailModel)
                         seen_ids.add(id)
+                    elif id:
+                        # Update existing cocktail's search statistics if duplicate ID found
+                        for existing_cocktail in cocktails:
+                            if existing_cocktail.id == id:
+                                if existing_cocktail.search_statistics is None:
+                                    existing_cocktail.search_statistics = CocktailSearchStatistics(
+                                        total_score=0.0, hit_results=[]
+                                    )
+                                existing_cocktail.search_statistics.total_score += getattr(point, "score", 0)
+                                existing_cocktail.search_statistics.hit_results.append(
+                                    CocktailVectorSearchResult(score=getattr(point, "score", 0))
+                                )
+                                break
 
-        return cocktails
+        sorted_cocktails = sorted(
+            cocktails,
+            key=lambda p: getattr(p.search_statistics, "total_score", 0) if p.search_statistics else 0,
+            reverse=True,
+        )
+
+        # Filter by total score threshold
+        filtered_cocktails = [
+            c
+            for c in sorted_cocktails
+            if c.search_statistics
+            and c.search_statistics.total_score > self.qdrant_options.semantic_search_total_score_threshold
+        ]
+
+        return filtered_cocktails

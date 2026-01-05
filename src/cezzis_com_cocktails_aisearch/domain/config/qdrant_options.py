@@ -16,6 +16,13 @@ class QdrantOptions(BaseSettings):
     collection_name: str = Field(default="", validation_alias="QDRANT_COLLECTION_NAME")
     vector_size: int = Field(default=0, validation_alias="QDRANT_VECTOR_SIZE")
     use_https: bool = Field(default=True, validation_alias="QDRANT_USE_HTTPS")
+    semantic_search_limit: int = Field(default=30, validation_alias="QDRANT_SEMANTIC_SEARCH_LIMIT")
+    semantic_search_score_threshold: float = Field(
+        default=0.0, validation_alias="QDRANT_SEMANTIC_SEARCH_SCORE_THRESHOLD"
+    )
+    semantic_search_total_score_threshold: float = Field(
+        default=0.0, validation_alias="QDRANT_SEMANTIC_SEARCH_TOTAL_SCORE_THRESHOLD"
+    )
 
 
 _logger: logging.Logger = logging.getLogger("qdrant_options")
@@ -42,6 +49,12 @@ def get_qdrant_options() -> QdrantOptions:
             raise ValueError("QDRANT_COLLECTION_NAME environment variable is required")
         if not _qdrant_options.vector_size or _qdrant_options.vector_size <= 0:
             raise ValueError("QDRANT_VECTOR_SIZE environment variable is required")
+        if _qdrant_options.semantic_search_limit <= 0:
+            raise ValueError("QDRANT_SEMANTIC_SEARCH_LIMIT must be greater than 0")
+        if _qdrant_options.semantic_search_score_threshold < 0.0:
+            raise ValueError("QDRANT_SEMANTIC_SEARCH_SCORE_THRESHOLD must be non-negative")
+        if _qdrant_options.semantic_search_total_score_threshold < 0.0:
+            raise ValueError("QDRANT_SEMANTIC_SEARCH_TOTAL_SCORE_THRESHOLD must be non-negative")
 
         _logger.info("Qdrant options loaded successfully.")
 

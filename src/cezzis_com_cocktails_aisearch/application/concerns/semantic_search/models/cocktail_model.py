@@ -1,7 +1,10 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_search_statistics import (
+    CocktailSearchStatistics,
+)
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.glassware_type_model import (
     GlasswareTypeModel,
 )
@@ -19,3 +22,6 @@ class CocktailModel(BaseModel):
     prepTimeMinutes: int = Field(..., description="Preparation time in minutes")
     searchTiles: List[str] = Field(..., description="Search tiles associated with the cocktail")
     glassware: List[GlasswareTypeModel] = Field(..., description="List of glassware types used for the cocktail")
+    search_statistics: Optional[CocktailSearchStatistics] = Field(
+        CocktailSearchStatistics(total_score=0.0, hit_results=[]), description="Search statistics for the cocktail"
+    )
