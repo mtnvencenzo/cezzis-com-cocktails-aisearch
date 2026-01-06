@@ -13,6 +13,7 @@ class AppOptions(BaseSettings):
     )
 
     allowed_origins: str = Field(default="", validation_alias="COCKTAILS_AISEARCH_ALLOWED_ORIGINS")
+    apim_host_key: str = Field(default="", validation_alias="APIM_HOST_KEY")
 
 
 _logger: logging.Logger = logging.getLogger("app_options")

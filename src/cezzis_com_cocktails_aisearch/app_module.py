@@ -6,6 +6,10 @@ from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.queries 
 from cezzis_com_cocktails_aisearch.domain.config import QdrantOptions, get_qdrant_options
 from cezzis_com_cocktails_aisearch.domain.config.app_options import AppOptions, get_app_options
 from cezzis_com_cocktails_aisearch.domain.config.hugging_face_options import HuggingFaceOptions, get_huggingface_options
+from cezzis_com_cocktails_aisearch.infrastructure.repositories import (
+    CocktailVectorRepository,
+    ICocktailVectorRepository,
+)
 
 
 def create_injector() -> Injector:
@@ -29,6 +33,7 @@ class AppModule(Module):
         )
 
         binder.bind(Mediator, Mediator(handler_class_manager=mediator_manager), scope=singleton)
+        binder.bind(ICocktailVectorRepository, CocktailVectorRepository, scope=singleton)
         binder.bind(AppOptions, get_app_options(), scope=singleton)
         binder.bind(HuggingFaceOptions, get_huggingface_options(), scope=singleton)
         binder.bind(QdrantOptions, get_qdrant_options(), scope=singleton)

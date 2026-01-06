@@ -1,9 +1,12 @@
 from typing import cast
 
-from fastapi import APIRouter, Body, Response
+from fastapi import APIRouter, Body, Request, Response
 from injector import inject
 from mediatr import Mediator
 
+from cezzis_com_cocktails_aisearch.application.behaviors.apim_host_key_authorization.apim_host_key_authorization import (
+    apim_host_key_authorization,
+)
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.commands.cocktail_embedding_command import (
     CocktailEmbeddingCommand,
 )
@@ -28,13 +31,14 @@ class EmbeddingRouter(APIRouter):
             },
         )
 
+    @apim_host_key_authorization
     async def embed(
-        self, request: CocktailEmbeddingRq = Body(..., description="The cocktail embedding request")
+        self, _rq: Request, body: CocktailEmbeddingRq = Body(..., description="The cocktail embedding request")
     ) -> Response:
         """
         Performs a semantic search for cocktails based on a free text query.
         """
-        command = CocktailEmbeddingCommand(chunks=request.content_chunks, cocktail_model=request.cocktail_model)
+        command = CocktailEmbeddingCommand(chunks=body.content_chunks, cocktail_model=body.cocktail_model)
 
         embedding_result = cast(bool, await self.mediator.send_async(command))  # casting due to type hinting issues
 
