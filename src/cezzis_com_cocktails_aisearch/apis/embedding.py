@@ -7,6 +7,9 @@ from mediatr import Mediator
 from cezzis_com_cocktails_aisearch.application.behaviors.apim_host_key_authorization.apim_host_key_authorization import (
     apim_host_key_authorization,
 )
+from cezzis_com_cocktails_aisearch.application.behaviors.oauth_authorization.oauth_authorization import (
+    oauth_authorization,
+)
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.commands.cocktail_embedding_command import (
     CocktailEmbeddingCommand,
 )
@@ -32,6 +35,7 @@ class EmbeddingRouter(APIRouter):
         )
 
     @apim_host_key_authorization
+    @oauth_authorization(scopes=["write:embeddings"])
     async def embed(
         self, _rq: Request, body: CocktailEmbeddingRq = Body(..., description="The cocktail embedding request")
     ) -> Response:
