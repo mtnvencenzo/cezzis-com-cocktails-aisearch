@@ -25,7 +25,7 @@ def oauth_authorization(scopes: list[str] | None = None):
 
     Example:
         # On a method
-        @oauth_authorization(scopes=["read:cocktails"])
+        @oauth_authorization(scopes=["write:embeddings"])
         async def get_cocktails(self, _rq: Request):
             ...
 

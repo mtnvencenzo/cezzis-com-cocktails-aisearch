@@ -14,7 +14,8 @@ class Auth0Options(BaseSettings):
 
     domain: str = Field(default="", validation_alias="AUTH0_DOMAIN")
     api_audience: str = Field(default="", validation_alias="AUTH0_API_AUDIENCE")
-    algorithms: list[str] = Field(default=["RS256"], validation_alias="AUTH0_ALGORITHMS")
+    client_id: str = Field(default="", validation_alias="AUTH0_CLIENT_ID")
+    algorithms: list[str] = Field(default_factory=lambda: ["RS256"])
     issuer: str = Field(default="", validation_alias="AUTH0_ISSUER")
 
 
@@ -33,15 +34,15 @@ def get_auth0_options() -> Auth0Options:
     if _auth0_options is None:
         _auth0_options = Auth0Options()
 
-        # Auto-populate issuer from domain if not provided
-        if not _auth0_options.issuer and _auth0_options.domain:
-            _auth0_options.issuer = f"https://{_auth0_options.domain}/"
-
         # Validate required configuration
         if not _auth0_options.domain:
             _logger.warning("AUTH0_DOMAIN environment variable is not configured")
         if not _auth0_options.api_audience:
             _logger.warning("AUTH0_API_AUDIENCE environment variable is not configured")
+        if not _auth0_options.issuer:
+            _logger.warning("AUTH0_ISSUER environment variable is not configured")
+        if not _auth0_options.client_id:
+            _logger.warning("AUTH0_CLIENT_ID environment variable is not configured")
 
         _logger.info("Auth0 options loaded successfully.")
 

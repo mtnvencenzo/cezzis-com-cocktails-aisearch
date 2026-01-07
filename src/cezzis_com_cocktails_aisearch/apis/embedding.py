@@ -32,6 +32,8 @@ class EmbeddingRouter(APIRouter):
                 204: {"description": "Embedding successful. No content returned."},
                 422: {"description": "Invalid request or embedding failed."},
             },
+            dependencies=[],
+            openapi_extra={"security": [{"auth0": ["write:embeddings"]}]},
         )
 
     @apim_host_key_authorization
