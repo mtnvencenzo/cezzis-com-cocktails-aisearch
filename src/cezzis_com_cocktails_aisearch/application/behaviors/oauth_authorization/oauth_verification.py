@@ -4,7 +4,7 @@ from typing import Any
 import httpx
 from jose import JWTError, jwt
 
-from cezzis_com_cocktails_aisearch.domain.config.auth0_options import Auth0Options, get_auth0_options
+from cezzis_com_cocktails_aisearch.domain.config.oauth_options import OAuthOptions, get_oauth_options
 
 _logger = logging.getLogger("oauth_verification")
 
@@ -16,22 +16,21 @@ class TokenVerificationError(Exception):
 
 
 class OAuth2TokenVerifier:
-    """Verifies OAuth2 JWT tokens from Auth0."""
+    """Verifies OAuth2 JWT tokens from OAuth."""
 
     def __init__(self):
-        self.auth0_options: Auth0Options = get_auth0_options()
+        self.oauth_options: OAuthOptions = get_oauth_options()
         self._jwks_cache: dict[str, Any] | None = None
 
     async def get_jwks(self) -> dict[str, Any]:
-        """Fetch JWKS (JSON Web Key Set) from Auth0.
-
+        """Fetch JWKS (JSON Web Key Set) from OAuth.
         Returns:
             dict: The JWKS data containing public keys.
         """
         if self._jwks_cache:
             return self._jwks_cache
 
-        jwks_url = f"https://{self.auth0_options.domain}/.well-known/jwks.json"
+        jwks_url = f"https://{self.oauth_options.domain}/.well-known/jwks.json"
 
         try:
             async with httpx.AsyncClient() as client:
@@ -41,7 +40,7 @@ class OAuth2TokenVerifier:
                 assert self._jwks_cache is not None
                 return self._jwks_cache
         except Exception as e:
-            _logger.error(f"Failed to fetch JWKS from Auth0: {e}")
+            _logger.error(f"Failed to fetch JWKS from OAuth: {e}")
             raise TokenVerificationError("Unable to fetch JWKS for token verification")
 
     def _get_signing_key(self, token: str, jwks: dict[str, Any]) -> str:
@@ -79,7 +78,7 @@ class OAuth2TokenVerifier:
             raise TokenVerificationError("Invalid token header")
 
     async def verify_token(self, token: str) -> dict[str, Any]:
-        """Verify an Auth0 JWT token and return its payload.
+        """Verify an OAuth JWT token and return its payload.
 
         Args:
             token: The JWT token to verify
@@ -90,8 +89,8 @@ class OAuth2TokenVerifier:
         Raises:
             TokenVerificationError: If verification fails
         """
-        if not self.auth0_options.domain or not self.auth0_options.api_audience:
-            raise TokenVerificationError("Auth0 configuration is incomplete")
+        if not self.oauth_options.domain or not self.oauth_options.api_audience:
+            raise TokenVerificationError("OAuth configuration is incomplete")
 
         try:
             # Get JWKS
@@ -104,9 +103,9 @@ class OAuth2TokenVerifier:
             payload = jwt.decode(
                 token,
                 rsa_key,
-                algorithms=self.auth0_options.algorithms,
-                audience=self.auth0_options.api_audience,
-                issuer=self.auth0_options.issuer,
+                algorithms=self.oauth_options.algorithms,
+                audience=self.oauth_options.api_audience,
+                issuer=self.oauth_options.issuer,
             )
 
             return payload
@@ -134,7 +133,7 @@ class OAuth2TokenVerifier:
         if not required_scopes:
             return True
 
-        # Auth0 typically puts scopes in the 'scope' claim as a space-separated string
+        # OAuth typically puts scopes in the 'scope' claim as a space-separated string
         token_scopes_str = payload.get("scope", "")
         token_scopes = token_scopes_str.split() if token_scopes_str else []
 

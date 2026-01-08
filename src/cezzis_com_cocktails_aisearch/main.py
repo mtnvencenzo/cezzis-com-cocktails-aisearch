@@ -10,28 +10,28 @@ from cezzis_com_cocktails_aisearch.apis.semantic_search import SemanticSearchRou
 from cezzis_com_cocktails_aisearch.app_module import create_injector
 from cezzis_com_cocktails_aisearch.application.behaviors import global_exception_handler, initialize_opentelemetry
 from cezzis_com_cocktails_aisearch.domain.config.app_options import AppOptions
-from cezzis_com_cocktails_aisearch.domain.config.auth0_options import Auth0Options
+from cezzis_com_cocktails_aisearch.domain.config.oauth_options import OAuthOptions
 
 sys.excepthook = global_exception_handler
 
 initialize_opentelemetry()
 injector = create_injector()
 app_options = injector.get(AppOptions)
-auth0_options = injector.get(Auth0Options)
+oauth_options = injector.get(OAuthOptions)
 
 # Configure OAuth2 security scheme for OpenAPI/Scalar docs
 oauth2_scheme_config = None
-if auth0_options.domain and auth0_options.api_audience:
+if oauth_options.domain and oauth_options.api_audience:
     oauth2_scheme_config = {
         "auth0": {
             "type": "oauth2",
             "flows": {
                 "authorizationCode": {
-                    "authorizationUrl": f"https://{auth0_options.domain}/authorize",
-                    "tokenUrl": f"https://{auth0_options.domain}/oauth/token",
+                    "authorizationUrl": f"https://{oauth_options.domain}/authorize?audience={oauth_options.api_audience}",
+                    "tokenUrl": f"https://{oauth_options.domain}/oauth/token",
                     "scopes": {"write:embeddings": "Create and update cocktail embeddings"},
                     "x-usePkce": "SHA-256",
-                    "x-defaultClientId": auth0_options.client_id or "",
+                    "x-defaultClientId": oauth_options.client_id or "",
                 }
             },
         }

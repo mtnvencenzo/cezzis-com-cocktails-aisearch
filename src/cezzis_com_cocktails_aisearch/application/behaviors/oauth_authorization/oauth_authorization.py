@@ -14,7 +14,7 @@ _logger = logging.getLogger("oauth_authorization")
 
 
 def oauth_authorization(scopes: list[str] | None = None):
-    """Decorator for OAuth2 authorization with Auth0 token verification.
+    """Decorator for OAuth2 authorization with OAuth token verification.
 
     Can be applied to:
     - Individual endpoint methods (async functions)
