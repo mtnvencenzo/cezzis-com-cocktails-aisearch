@@ -19,7 +19,7 @@
                 "cwd": "${workspaceFolder}/src/cezzis_com_cocktails_aisearch",
                 "serverReadyAction": {
                     "action": "openExternally",
-                    "pattern": "Uvicorn running on",
+                    "pattern": "Application startup complete.",
                     "uriFormat": "http://localhost:8011/scalar/v1"
                 }
             }

@@ -1749,14 +1749,14 @@ files = [
 
 [[package]]
 name = "langchain"
-version = "1.2.0"
+version = "1.2.2"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0.0,>=3.10.0"
 groups = ["main"]
 files = [
-    {file = "langchain-1.2.0-py3-none-any.whl", hash = "sha256:82f0d17aa4fbb11560b30e1e7d4aeb75e3ad71ce09b85c90ab208b181a24ffac"},
-    {file = "langchain-1.2.0.tar.gz", hash = "sha256:a087d1e2b2969819e29a91a6d5f98302aafe31bd49ba377ecee3bf5a5dcfe14a"},
+    {file = "langchain-1.2.2-py3-none-any.whl", hash = "sha256:1aed3d6a3d7180d0db9b8789f38ea1c4f8c883248e86501ed580e7f5c3ca939f"},
+    {file = "langchain-1.2.2.tar.gz", hash = "sha256:3f49321cfbf821b3f541aa8a504c35b48ef5e9518a948efa8eeb20cb16eb95a8"},
 ]
 
 [package.dependencies]
@@ -2936,14 +2936,14 @@ files = [
 
 [[package]]
 name = "pathspec"
-version = "1.0.1"
+version = "1.0.2"
 description = "Utility library for gitignore style pattern matching of file paths."
 optional = false
 python-versions = ">=3.9"
 groups = ["dev"]
 files = [
-    {file = "pathspec-1.0.1-py3-none-any.whl", hash = "sha256:8870061f22c58e6d83463cfce9a7dd6eca0512c772c1001fb09ac64091816721"},
-    {file = "pathspec-1.0.1.tar.gz", hash = "sha256:e2769b508d0dd47b09af6ee2c75b2744a2cb1f474ae4b1494fd6a1b7a841613c"},
+    {file = "pathspec-1.0.2-py3-none-any.whl", hash = "sha256:62f8558917908d237d399b9b338ef455a814801a4688bc41074b25feefd93472"},
+    {file = "pathspec-1.0.2.tar.gz", hash = "sha256:fa32b1eb775ed9ba8d599b22c5f906dc098113989da2c00bf8b210078ca7fb92"},
 ]
 
 [package.extras]
@@ -3897,26 +3897,26 @@ files = [
 
 [[package]]
 name = "scalar-fastapi"
-version = "1.5.0"
+version = "1.6.0"
 description = "This plugin provides an easy way to render a beautiful API reference based on a OpenAPI/Swagger file with FastAPI."
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "scalar_fastapi-1.5.0-py3-none-any.whl", hash = "sha256:8e712599ccdfbb614bff5583fdbee1bef03e5fac1e06520287337ff232cb667a"},
-    {file = "scalar_fastapi-1.5.0.tar.gz", hash = "sha256:5ae887fcc0db63305dc41dc39d61f7be183256085872aa33b294e0d48e29901e"},
+    {file = "scalar_fastapi-1.6.0-py3-none-any.whl", hash = "sha256:dced90a726c0408aee96217b3aa30424fda0ab4cb2f476753f8592f8d73a9edf"},
+    {file = "scalar_fastapi-1.6.0.tar.gz", hash = "sha256:3ddeb7c6733f97bbeddf05742594259ddcd01ee1468ee3c9724fb90b7e1d5eee"},
 ]
 
 [[package]]
 name = "sentry-sdk"
-version = "2.48.0"
+version = "2.49.0"
 description = "Python client for Sentry (https://sentry.io)"
 optional = false
 python-versions = ">=3.6"
 groups = ["main"]
 files = [
-    {file = "sentry_sdk-2.48.0-py2.py3-none-any.whl", hash = "sha256:6b12ac256769d41825d9b7518444e57fa35b5642df4c7c5e322af4d2c8721172"},
-    {file = "sentry_sdk-2.48.0.tar.gz", hash = "sha256:5213190977ff7fdff8a58b722fb807f8d5524a80488626ebeda1b5676c0c1473"},
+    {file = "sentry_sdk-2.49.0-py2.py3-none-any.whl", hash = "sha256:6ea78499133874445a20fe9c826c9e960070abeb7ae0cdf930314ab16bb97aa0"},
+    {file = "sentry_sdk-2.49.0.tar.gz", hash = "sha256:c1878599cde410d481c04ef50ee3aedd4f600e4d0d253f4763041e468b332c30"},
 ]
 
 [package.dependencies]
@@ -4152,14 +4152,14 @@ typing-extensions = ">=4.12.0"
 
 [[package]]
 name = "urllib3"
-version = "2.6.2"
+version = "2.6.3"
 description = "HTTP library with thread-safe connection pooling, file post, and more."
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "urllib3-2.6.2-py3-none-any.whl", hash = "sha256:ec21cddfe7724fc7cb4ba4bea7aa8e2ef36f607a4bab81aa6ce42a13dc3f03dd"},
-    {file = "urllib3-2.6.2.tar.gz", hash = "sha256:016f9c98bb7e98085cb2b4b17b87d2c702975664e4f060c6532e64d1c1a5e797"},
+    {file = "urllib3-2.6.3-py3-none-any.whl", hash = "sha256:bf272323e553dfb2e87d9bfd225ca7b0f467b919d7bbd355436d3fd37cb0acd4"},
+    {file = "urllib3-2.6.3.tar.gz", hash = "sha256:1b62b6884944a57dbe321509ab94fd4d3b307075e0c2eae991ac71ee15ad38ed"},
 ]
 
 [package.extras]
