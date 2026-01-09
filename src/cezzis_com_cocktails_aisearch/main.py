@@ -9,6 +9,7 @@ from cezzis_com_cocktails_aisearch.apis.scalar_docs import ScalarDocsRouter
 from cezzis_com_cocktails_aisearch.apis.semantic_search import SemanticSearchRouter
 from cezzis_com_cocktails_aisearch.app_module import create_injector
 from cezzis_com_cocktails_aisearch.application.behaviors import global_exception_handler, initialize_opentelemetry
+from cezzis_com_cocktails_aisearch.application.behaviors.openapi.openapi_definition import openapi_definition
 from cezzis_com_cocktails_aisearch.domain.config.app_options import AppOptions
 from cezzis_com_cocktails_aisearch.domain.config.oauth_options import OAuthOptions
 
@@ -19,46 +20,9 @@ injector = create_injector()
 app_options = injector.get(AppOptions)
 oauth_options = injector.get(OAuthOptions)
 
-# Configure OAuth2 security scheme for OpenAPI/Scalar docs
-oauth2_scheme_config = None
-if oauth_options.domain and oauth_options.api_audience:
-    oauth2_scheme_config = {
-        "auth0": {
-            "type": "oauth2",
-            "flows": {
-                "authorizationCode": {
-                    "authorizationUrl": f"https://{oauth_options.domain}/authorize?audience={oauth_options.api_audience}",
-                    "tokenUrl": f"https://{oauth_options.domain}/oauth/token",
-                    "scopes": {"write:embeddings": "Create and update cocktail embeddings"},
-                    "x-usePkce": "SHA-256",
-                    "x-defaultClientId": oauth_options.client_id or "",
-                }
-            },
-        }
-    }
 
 app = FastAPI()
-
-# Add security schemes to OpenAPI schema
-if oauth2_scheme_config:
-    app.openapi_schema = None  # Force regeneration
-
-    def custom_openapi():
-        if app.openapi_schema:
-            return app.openapi_schema
-        from fastapi.openapi.utils import get_openapi
-
-        openapi_schema = get_openapi(
-            title="Cezzi's Cocktails AI Search API",
-            description="An AI-powered cocktail search API using semantic search and embeddings.",
-            version="1.0.0",
-            routes=app.routes,
-        )
-        openapi_schema["components"]["securitySchemes"] = oauth2_scheme_config
-        app.openapi_schema = openapi_schema
-        return app.openapi_schema
-
-    app.openapi = custom_openapi
+app.openapi = lambda: openapi_definition(app, oauth_options)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 app.add_middleware(
