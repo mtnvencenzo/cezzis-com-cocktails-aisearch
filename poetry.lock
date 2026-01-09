@@ -1781,14 +1781,14 @@ files = [
 
 [[package]]
 name = "langchain"
-version = "1.2.3"
+version = "1.2.2"
 description = "Building applications with LLMs through composability"
 optional = false
 python-versions = "<4.0.0,>=3.10.0"
 groups = ["main"]
 files = [
-    {file = "langchain-1.2.3-py3-none-any.whl", hash = "sha256:5cdc7c80f672962b030c4b0d16d0d8f26d849c0ada63a4b8653a20d7505512ae"},
-    {file = "langchain-1.2.3.tar.gz", hash = "sha256:9d6171f9c3c760ca3c7c2cf8518e6f8625380962c488b41e35ebff1f1d611077"},
+    {file = "langchain-1.2.2-py3-none-any.whl", hash = "sha256:1aed3d6a3d7180d0db9b8789f38ea1c4f8c883248e86501ed580e7f5c3ca939f"},
+    {file = "langchain-1.2.2.tar.gz", hash = "sha256:3f49321cfbf821b3f541aa8a504c35b48ef5e9518a948efa8eeb20cb16eb95a8"},
 ]
 
 [package.dependencies]
