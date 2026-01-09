@@ -283,14 +283,14 @@ python-jose = {version = ">=3.5.0,<4.0.0", extras = ["cryptography"]}
 
 [[package]]
 name = "cezzis-oauth-fastapi"
-version = "0.0.22"
+version = "0.0.23"
 description = "A lightweight, production-ready Python library for OAuth 2.0 authentication. Provides both **token acquisition** and **JWT verification** with enterprise-grade features including automatic token caching, refresh management, JWKS-based verification, and scope validation."
 optional = false
 python-versions = "<3.15,>=3.12"
 groups = ["main"]
 files = [
-    {file = "cezzis_oauth_fastapi-0.0.22-py3-none-any.whl", hash = "sha256:3eb631362dbb35950b05ae2de22d2070ac84715df6d20b7dec3faad9b26d4c1f"},
-    {file = "cezzis_oauth_fastapi-0.0.22.tar.gz", hash = "sha256:e8debc9280e524c59d1ce9eb2ab69560ea4eaaecd28fa10793ecfb6caa614785"},
+    {file = "cezzis_oauth_fastapi-0.0.23-py3-none-any.whl", hash = "sha256:4f41b0fe9cee6073673e6906deaf431528e6fa7f3e16da5a69e713aae24ee26c"},
+    {file = "cezzis_oauth_fastapi-0.0.23.tar.gz", hash = "sha256:f426aa1970dcc31d6244d8ca759678c09768f0f0e83c623fe940f8e0e7770ab1"},
 ]
 
 [package.dependencies]
@@ -1630,14 +1630,14 @@ files = [
 
 [[package]]
 name = "injector"
-version = "0.23.0"
+version = "0.24.0"
 description = "Injector - Python dependency injection framework, inspired by Guice"
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "injector-0.23.0-py2.py3-none-any.whl", hash = "sha256:86ab389805b4aaabfe235b2b2b85ff515af4d0209faccf1d60de2872c92c1fa0"},
-    {file = "injector-0.23.0.tar.gz", hash = "sha256:7e59db84faa5358474c8ee05abca6ab6bd02519fbefcf175e0b230ee7d2d4bac"},
+    {file = "injector-0.24.0-py3-none-any.whl", hash = "sha256:47294c7a7fdb811f0d1b442a1e0152bb2fc28b2ccaaba4cba44e5e125e0da2d0"},
+    {file = "injector-0.24.0.tar.gz", hash = "sha256:e85a75d1516cff2f03170f3fd1219f56acb25c9a05e307819ae0dcde3dad3d3f"},
 ]
 
 [package.extras]
