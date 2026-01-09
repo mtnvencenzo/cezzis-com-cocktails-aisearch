@@ -1,5 +1,8 @@
 from typing import cast
 
+from cezzis_oauth_fastapi import (
+    oauth_authorization,
+)
 from fastapi import APIRouter, Body, Request, Response
 from injector import inject
 from mediatr import Mediator
@@ -7,15 +10,13 @@ from mediatr import Mediator
 from cezzis_com_cocktails_aisearch.application.behaviors.apim_host_key_authorization.apim_host_key_authorization import (
     apim_host_key_authorization,
 )
-from cezzis_com_cocktails_aisearch.application.behaviors.oauth_authorization.oauth_authorization import (
-    oauth_authorization,
-)
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.commands.cocktail_embedding_command import (
     CocktailEmbeddingCommand,
 )
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktails_embedding_rq import (
     CocktailEmbeddingRq,
 )
+from cezzis_com_cocktails_aisearch.domain.config.oauth_options import get_oauth_options
 
 
 class EmbeddingRouter(APIRouter):
@@ -37,7 +38,7 @@ class EmbeddingRouter(APIRouter):
         )
 
     @apim_host_key_authorization
-    @oauth_authorization(scopes=["write:embeddings"])
+    @oauth_authorization(scopes=["write:embeddings"], config_provider=get_oauth_options)
     async def embed(
         self, _rq: Request, body: CocktailEmbeddingRq = Body(..., description="The cocktail embedding request")
     ) -> Response:

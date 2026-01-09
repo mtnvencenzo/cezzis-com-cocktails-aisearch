@@ -13,7 +13,7 @@ class OAuthOptions(BaseSettings):
     )
 
     domain: str = Field(default="", validation_alias="OAUTH_DOMAIN")
-    api_audience: str = Field(default="", validation_alias="OAUTH_API_AUDIENCE")
+    audience: str = Field(default="", validation_alias="OAUTH_AUDIENCE")
     client_id: str = Field(default="", validation_alias="OAUTH_CLIENT_ID")
     algorithms: list[str] = Field(default_factory=lambda: ["RS256"])
     issuer: str = Field(default="", validation_alias="OAUTH_ISSUER")
@@ -35,8 +35,8 @@ def get_oauth_options() -> OAuthOptions:
         # Validate required configuration
         if not _oauth_options.domain:
             _logger.warning("OAUTH_DOMAIN environment variable is not configured")
-        if not _oauth_options.api_audience:
-            _logger.warning("OAUTH_API_AUDIENCE environment variable is not configured")
+        if not _oauth_options.audience:
+            _logger.warning("OAUTH_AUDIENCE environment variable is not configured")
         if not _oauth_options.issuer:
             _logger.warning("OAUTH_ISSUER environment variable is not configured")
         if not _oauth_options.client_id:

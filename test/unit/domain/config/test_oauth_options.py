@@ -19,7 +19,7 @@ class TestOAuthOptions:
             options = OAuthOptions()
 
             assert options.domain == ""
-            assert options.api_audience == ""
+            assert options.audience == ""
             assert options.client_id == ""
             assert options.algorithms == ["RS256"]
             assert options.issuer == ""
@@ -30,7 +30,7 @@ class TestOAuthOptions:
             os.environ,
             {
                 "OAUTH_DOMAIN": "auth.example.com",
-                "OAUTH_API_AUDIENCE": "api://cocktails",
+                "OAUTH_AUDIENCE": "api://cocktails",
                 "OAUTH_CLIENT_ID": "test-client-id",
                 "OAUTH_ISSUER": "https://auth.example.com/",
             },
@@ -38,7 +38,7 @@ class TestOAuthOptions:
             options = OAuthOptions()
 
             assert options.domain == "auth.example.com"
-            assert options.api_audience == "api://cocktails"
+            assert options.audience == "api://cocktails"
             assert options.client_id == "test-client-id"
             assert options.issuer == "https://auth.example.com/"
 
@@ -46,7 +46,7 @@ class TestOAuthOptions:
         """Test that get_oauth_options returns a singleton instance."""
         clear_oauth_options_cache()
 
-        with patch.dict(os.environ, {"OAUTH_DOMAIN": "auth.test.com", "OAUTH_API_AUDIENCE": "api://test"}):
+        with patch.dict(os.environ, {"OAUTH_DOMAIN": "auth.test.com", "OAUTH_AUDIENCE": "api://test"}):
             options1 = get_oauth_options()
             options2 = get_oauth_options()
 

@@ -19,7 +19,7 @@ class TestOpenApiDefinition:
         "os.environ",
         {
             "OAUTH_DOMAIN": "auth.example.com",
-            "OAUTH_API_AUDIENCE": "api://cocktails",
+            "OAUTH_AUDIENCE": "api://cocktails",
             "OAUTH_CLIENT_ID": "test-client-id",
             "OAUTH_ISSUER": "https://auth.example.com/",
         },
@@ -29,7 +29,7 @@ class TestOpenApiDefinition:
         app = FastAPI()
         oauth_options = OAuthOptions(
             domain="auth.example.com",
-            api_audience="api://cocktails",
+            audience="api://cocktails",
             client_id="test-client-id",
             issuer="https://auth.example.com/",
             algorithms=["RS256"],
@@ -72,16 +72,14 @@ class TestOpenApiDefinition:
         "os.environ",
         {
             "OAUTH_DOMAIN": "auth.example.com",
-            "OAUTH_API_AUDIENCE": "api://cocktails",
+            "OAUTH_AUDIENCE": "api://cocktails",
             "OAUTH_CLIENT_ID": "test-client-id",
         },
     )
     def test_openapi_definition_sets_app_schema(self, mock_generate_scheme, mock_get_openapi):
         """Test that openapi_definition sets the app's openapi_schema."""
         app = FastAPI()
-        oauth_options = OAuthOptions(
-            domain="auth.example.com", api_audience="api://cocktails", client_id="test-client-id"
-        )
+        oauth_options = OAuthOptions(domain="auth.example.com", audience="api://cocktails", client_id="test-client-id")
 
         mock_openapi_schema = {"openapi": "3.0.0", "components": {}}
         mock_get_openapi.return_value = mock_openapi_schema

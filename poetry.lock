@@ -266,14 +266,14 @@ files = [
 
 [[package]]
 name = "cezzis-oauth"
-version = "0.0.18"
+version = "0.0.20"
 description = "A lightweight, production-ready Python library for OAuth 2.0 authentication. Provides both **token acquisition** and **JWT verification** with enterprise-grade features including automatic token caching, refresh management, JWKS-based verification, and scope validation."
 optional = false
 python-versions = "<3.15,>=3.12"
 groups = ["main"]
 files = [
-    {file = "cezzis_oauth-0.0.18-py3-none-any.whl", hash = "sha256:1752f9c051a83cedce08f898abd3878198c68bc41876d583ffe90bfa09775a6e"},
-    {file = "cezzis_oauth-0.0.18.tar.gz", hash = "sha256:ec67abe04c9d34762cb0f9707f8dabed1c343ffa68a47d246028fe6db33a259f"},
+    {file = "cezzis_oauth-0.0.20-py3-none-any.whl", hash = "sha256:f933eeeb5bed74b36586fa4c1ae92213392d25a4d13fe4c9b406bc7da1550722"},
+    {file = "cezzis_oauth-0.0.20.tar.gz", hash = "sha256:5915a3c8184d26d048880568f6deb08970796e4afc6ea812b0cb6f8fb88fd951"},
 ]
 
 [package.dependencies]
@@ -282,15 +282,34 @@ httpx = ">=0.28.1,<0.29.0"
 python-jose = {version = ">=3.5.0,<4.0.0", extras = ["cryptography"]}
 
 [[package]]
+name = "cezzis-oauth-fastapi"
+version = "0.0.22"
+description = "A lightweight, production-ready Python library for OAuth 2.0 authentication. Provides both **token acquisition** and **JWT verification** with enterprise-grade features including automatic token caching, refresh management, JWKS-based verification, and scope validation."
+optional = false
+python-versions = "<3.15,>=3.12"
+groups = ["main"]
+files = [
+    {file = "cezzis_oauth_fastapi-0.0.22-py3-none-any.whl", hash = "sha256:3eb631362dbb35950b05ae2de22d2070ac84715df6d20b7dec3faad9b26d4c1f"},
+    {file = "cezzis_oauth_fastapi-0.0.22.tar.gz", hash = "sha256:e8debc9280e524c59d1ce9eb2ab69560ea4eaaecd28fa10793ecfb6caa614785"},
+]
+
+[package.dependencies]
+authlib = ">=1.4.0,<2.0.0"
+cezzis-oauth = ">=0.0.19,<1.0.0"
+fastapi = {version = ">=0.128.0,<1.0.0", extras = ["standard"]}
+httpx = ">=0.28.1,<1.0.0"
+python-jose = {version = ">=3.5.0,<4.0.0", extras = ["cryptography"]}
+
+[[package]]
 name = "cezzis-otel"
-version = "0.0.18"
+version = "0.0.20"
 description = "cezzis-otel is a lightweight Python library for working with opentelemetry.  It simplifies otel collector and otlpexporter integration."
 optional = false
 python-versions = "<3.15,>=3.12"
 groups = ["main"]
 files = [
-    {file = "cezzis_otel-0.0.18-py3-none-any.whl", hash = "sha256:7dbd6c09b043ab94e1658d4537021366d62ab89a7ce7bc498224b48ee889fda8"},
-    {file = "cezzis_otel-0.0.18.tar.gz", hash = "sha256:0b0fc854b5276753ae9929493e792a57b5d63b3515a3ad9832daf1da892ae74d"},
+    {file = "cezzis_otel-0.0.20-py3-none-any.whl", hash = "sha256:a314846bc3dbecb18d07d3ba9920696eead4513f13b1cdc7a451290023f981a6"},
+    {file = "cezzis_otel-0.0.20.tar.gz", hash = "sha256:3f66e332f85e3062e1fb601b393e555725298ca629072787ddc7117abf185ddf"},
 ]
 
 [package.dependencies]
@@ -802,14 +821,14 @@ idna = ">=2.0.0"
 
 [[package]]
 name = "fastapi"
-version = "0.121.3"
+version = "0.128.0"
 description = "FastAPI framework, high performance, easy to learn, fast to code, ready for production"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "fastapi-0.121.3-py3-none-any.whl", hash = "sha256:0c78fc87587fcd910ca1bbf5bc8ba37b80e119b388a7206b39f0ecc95ebf53e9"},
-    {file = "fastapi-0.121.3.tar.gz", hash = "sha256:0055bc24fe53e56a40e9e0ad1ae2baa81622c406e548e501e717634e2dfbc40b"},
+    {file = "fastapi-0.128.0-py3-none-any.whl", hash = "sha256:aebd93f9716ee3b4f4fcfe13ffb7cf308d99c9f3ab5622d8877441072561582d"},
+    {file = "fastapi-0.128.0.tar.gz", hash = "sha256:1cc179e1cef10a6be60ffe429f79b829dce99d8de32d7acb7e6c8dfdf7f2645a"},
 ]
 
 [package.dependencies]
@@ -818,7 +837,9 @@ email-validator = {version = ">=2.0.0", optional = true, markers = "extra == \"s
 fastapi-cli = {version = ">=0.0.8", extras = ["standard"], optional = true, markers = "extra == \"standard\""}
 httpx = {version = ">=0.23.0,<1.0.0", optional = true, markers = "extra == \"standard\""}
 jinja2 = {version = ">=3.1.5", optional = true, markers = "extra == \"standard\""}
-pydantic = ">=1.7.4,<1.8 || >1.8,<1.8.1 || >1.8.1,<2.0.0 || >2.0.0,<2.0.1 || >2.0.1,<2.1.0 || >2.1.0,<3.0.0"
+pydantic = ">=2.7.0"
+pydantic-extra-types = {version = ">=2.0.0", optional = true, markers = "extra == \"standard\""}
+pydantic-settings = {version = ">=2.0.0", optional = true, markers = "extra == \"standard\""}
 python-multipart = {version = ">=0.0.18", optional = true, markers = "extra == \"standard\""}
 starlette = ">=0.40.0,<0.51.0"
 typing-extensions = ">=4.8.0"
@@ -826,8 +847,8 @@ uvicorn = {version = ">=0.12.0", extras = ["standard"], optional = true, markers
 
 [package.extras]
 all = ["email-validator (>=2.0.0)", "fastapi-cli[standard] (>=0.0.8)", "httpx (>=0.23.0,<1.0.0)", "itsdangerous (>=1.1.0)", "jinja2 (>=3.1.5)", "orjson (>=3.2.1)", "pydantic-extra-types (>=2.0.0)", "pydantic-settings (>=2.0.0)", "python-multipart (>=0.0.18)", "pyyaml (>=5.3.1)", "ujson (>=4.0.1,!=4.0.2,!=4.1.0,!=4.2.0,!=4.3.0,!=5.0.0,!=5.1.0)", "uvicorn[standard] (>=0.12.0)"]
-standard = ["email-validator (>=2.0.0)", "fastapi-cli[standard] (>=0.0.8)", "httpx (>=0.23.0,<1.0.0)", "jinja2 (>=3.1.5)", "python-multipart (>=0.0.18)", "uvicorn[standard] (>=0.12.0)"]
-standard-no-fastapi-cloud-cli = ["email-validator (>=2.0.0)", "fastapi-cli[standard-no-fastapi-cloud-cli] (>=0.0.8)", "httpx (>=0.23.0,<1.0.0)", "jinja2 (>=3.1.5)", "python-multipart (>=0.0.18)", "uvicorn[standard] (>=0.12.0)"]
+standard = ["email-validator (>=2.0.0)", "fastapi-cli[standard] (>=0.0.8)", "httpx (>=0.23.0,<1.0.0)", "jinja2 (>=3.1.5)", "pydantic-extra-types (>=2.0.0)", "pydantic-settings (>=2.0.0)", "python-multipart (>=0.0.18)", "uvicorn[standard] (>=0.12.0)"]
+standard-no-fastapi-cloud-cli = ["email-validator (>=2.0.0)", "fastapi-cli[standard-no-fastapi-cloud-cli] (>=0.0.8)", "httpx (>=0.23.0,<1.0.0)", "jinja2 (>=3.1.5)", "pydantic-extra-types (>=2.0.0)", "pydantic-settings (>=2.0.0)", "python-multipart (>=0.0.18)", "uvicorn[standard] (>=0.12.0)"]
 
 [[package]]
 name = "fastapi-cli"
@@ -1609,18 +1630,18 @@ files = [
 
 [[package]]
 name = "injector"
-version = "0.22.0"
+version = "0.23.0"
 description = "Injector - Python dependency injection framework, inspired by Guice"
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "injector-0.22.0-py2.py3-none-any.whl", hash = "sha256:74379ccef3b893bc7d0b7d504c255b5160c5a55e97dc7bdcc73cb33cc7dce3a1"},
-    {file = "injector-0.22.0.tar.gz", hash = "sha256:79b2d4a0874c75d3aa735f11c5b32b89d9542711ca07071161882c5e9cc15ed6"},
+    {file = "injector-0.23.0-py2.py3-none-any.whl", hash = "sha256:86ab389805b4aaabfe235b2b2b85ff515af4d0209faccf1d60de2872c92c1fa0"},
+    {file = "injector-0.23.0.tar.gz", hash = "sha256:7e59db84faa5358474c8ee05abca6ab6bd02519fbefcf175e0b230ee7d2d4bac"},
 ]
 
 [package.extras]
-dev = ["black (==24.3.0) ; implementation_name == \"cpython\"", "build (==1.0.3)", "check-manifest (==0.49)", "click (==8.1.7)", "coverage[toml] (==7.3.2)", "exceptiongroup (==1.2.0)", "importlib-metadata (==7.0.0)", "iniconfig (==2.0.0)", "mypy (==1.7.1) ; implementation_name == \"cpython\"", "mypy-extensions (==1.0.0)", "packaging (==23.2)", "pathspec (==0.12.1)", "platformdirs (==4.1.0)", "pluggy (==1.3.0)", "pyproject-hooks (==1.0.0)", "pytest (==7.4.3)", "pytest-cov (==4.1.0)", "tomli (==2.0.1)", "typing-extensions (==4.9.0) ; python_version < \"3.9\"", "zipp (==3.17.0)"]
+dev = ["black (==24.3.0) ; implementation_name == \"cpython\"", "build (==1.0.3)", "check-manifest (==0.49)", "click (==8.1.7)", "coverage[toml] (==7.3.2)", "exceptiongroup (==1.2.0)", "importlib-metadata (==7.0.0)", "iniconfig (==2.0.0)", "mypy (==1.7.1) ; implementation_name == \"cpython\"", "mypy-extensions (==1.0.0)", "packaging (==25.0)", "pathspec (==0.12.1)", "platformdirs (==4.1.0)", "pluggy (==1.3.0)", "pyproject-hooks (==1.0.0)", "pytest (==7.4.3)", "pytest-cov (==4.1.0)", "tomli (==2.0.1)", "typing-extensions (==4.9.0) ; python_version < \"3.9\"", "zipp (==3.19.1)"]
 
 [[package]]
 name = "jinja2"
@@ -3355,6 +3376,31 @@ files = [
 typing-extensions = ">=4.14.1"
 
 [[package]]
+name = "pydantic-extra-types"
+version = "2.11.0"
+description = "Extra Pydantic types."
+optional = false
+python-versions = ">=3.9"
+groups = ["main"]
+files = [
+    {file = "pydantic_extra_types-2.11.0-py3-none-any.whl", hash = "sha256:84b864d250a0fc62535b7ec591e36f2c5b4d1325fa0017eb8cda9aeb63b374a6"},
+    {file = "pydantic_extra_types-2.11.0.tar.gz", hash = "sha256:4e9991959d045b75feb775683437a97991d02c138e00b59176571db9ce634f0e"},
+]
+
+[package.dependencies]
+pydantic = ">=2.5.2"
+typing-extensions = "*"
+
+[package.extras]
+all = ["cron-converter (>=1.2.2)", "pendulum (>=3.0.0,<4.0.0)", "phonenumbers (>=8,<10)", "pycountry (>=23)", "pymongo (>=4.0.0,<5.0.0)", "python-ulid (>=1,<2) ; python_version < \"3.9\"", "python-ulid (>=1,<4) ; python_version >= \"3.9\"", "pytz (>=2024.1)", "semver (>=3.0.2)", "semver (>=3.0.2,<3.1.0)", "tzdata (>=2024.1)"]
+cron = ["cron-converter (>=1.2.2)"]
+pendulum = ["pendulum (>=3.0.0,<4.0.0)"]
+phonenumbers = ["phonenumbers (>=8,<10)"]
+pycountry = ["pycountry (>=23)"]
+python-ulid = ["python-ulid (>=1,<2) ; python_version < \"3.9\"", "python-ulid (>=1,<4) ; python_version >= \"3.9\""]
+semver = ["semver (>=3.0.2)"]
+
+[[package]]
 name = "pydantic-settings"
 version = "2.12.0"
 description = "Settings management using Pydantic"
@@ -5045,4 +5091,4 @@ cffi = ["cffi (>=1.17,<2.0) ; platform_python_implementation != \"PyPy\" and pyt
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<3.15"
-content-hash = "bb9e1f60ed1f813663b234b4c7ed520c45097fcd04128118d452483de0176089"
+content-hash = "357848e1c9b8a8e6d9790d3ad60ef7b38d97081b4612f722fa66654f40a4ab55"

@@ -17,7 +17,7 @@ def openapi_definition(app: FastAPI, oauth_options: OAuthOptions) -> dict:
         name="auth0",
         client_id=oauth_options.client_id or "",
         domain=oauth_options.domain,
-        audience=oauth_options.api_audience,
+        audience=oauth_options.audience,
         scopes={"write:embeddings": "Create and update cocktail embeddings"},
         pkce="SHA-256",
     )
