@@ -3,12 +3,13 @@ import os
 from functools import wraps
 from typing import Callable, Union, cast
 
+from cezzis_oauth import (
+    OAuth2TokenVerifier,
+    TokenVerificationError,
+)
 from fastapi import HTTPException, Request
 
-from cezzis_com_cocktails_aisearch.application.behaviors.oauth_authorization.oauth_verification import (
-    TokenVerificationError,
-    get_token_verifier,
-)
+from cezzis_com_cocktails_aisearch.domain.config.oauth_options import get_oauth_options
 
 _logger = logging.getLogger("oauth_authorization")
 
@@ -78,7 +79,14 @@ def _wrap_function(func: Callable, required_scopes: list[str]) -> Callable:
 
         try:
             # Verify the token
-            verifier = get_token_verifier()
+            oauth_options = get_oauth_options()
+            verifier = OAuth2TokenVerifier(
+                domain=oauth_options.domain,
+                audience=oauth_options.api_audience,
+                algorithms=oauth_options.algorithms,
+                issuer=oauth_options.issuer,
+            )
+
             payload = await verifier.verify_token(token)
 
             # Verify scopes if required
