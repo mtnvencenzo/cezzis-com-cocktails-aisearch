@@ -39,6 +39,7 @@ async def problem_details_exception_handler(request: Request, exc: ProblemDetail
 
     return JSONResponse(
         status_code=problem_details.status,
+        media_type="application/problem+json",
         content=problem_details.model_dump(exclude_none=True),
     )
 
@@ -78,6 +79,7 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
 
     return JSONResponse(
         status_code=exc.status_code,
+        media_type="application/problem+json",
         content=problem_details.model_dump(exclude_none=True),
     )
 
@@ -126,6 +128,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
     return JSONResponse(
         status_code=422,
+        media_type="application/problem+json",
         content=problem_details.model_dump(exclude_none=True),
     )
 
@@ -153,5 +156,6 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
 
     return JSONResponse(
         status_code=500,
+        media_type="application/problem+json",
         content=problem_details.model_dump(exclude_none=True),
     )
