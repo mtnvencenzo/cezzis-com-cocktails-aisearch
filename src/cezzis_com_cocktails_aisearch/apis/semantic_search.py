@@ -22,7 +22,14 @@ class SemanticSearchRouter(APIRouter):
     def __init__(self, mediator: Mediator):
         super().__init__()
         self.mediator = mediator
-        self.add_api_route(path="/v1/cocktails/search", endpoint=self.search, methods=["GET"])
+        self.add_api_route(
+            path="/v1/cocktails/search",
+            endpoint=self.search,
+            methods=["GET"],
+            responses={
+                200: {"model": CocktailsSearchRs, "description": "Successful search results"},
+            },
+        )
 
     @apim_host_key_authorization
     async def search(

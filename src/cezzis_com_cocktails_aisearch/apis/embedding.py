@@ -10,6 +10,9 @@ from mediatr import Mediator
 from cezzis_com_cocktails_aisearch.application.behaviors.apim_host_key_authorization.apim_host_key_authorization import (
     apim_host_key_authorization,
 )
+from cezzis_com_cocktails_aisearch.application.behaviors.error_handling.exception_types import (
+    InternalServerErrorException,
+)
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.commands.cocktail_embedding_command import (
     CocktailEmbeddingCommand,
 )
@@ -31,7 +34,6 @@ class EmbeddingRouter(APIRouter):
             status_code=204,
             responses={
                 204: {"description": "Embedding successful. No content returned."},
-                422: {"description": "Invalid request or embedding failed."},
             },
             dependencies=[],
             openapi_extra={"security": [{"auth0": ["write:embeddings"]}]},
@@ -52,4 +54,4 @@ class EmbeddingRouter(APIRouter):
         if embedding_result:
             return Response(status_code=204)
 
-        raise Exception("Failed to embed cocktail description chunks")
+        raise InternalServerErrorException(detail="Failed to embed cocktail description chunks")

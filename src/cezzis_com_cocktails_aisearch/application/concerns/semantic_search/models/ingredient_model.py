@@ -1,6 +1,6 @@
 from typing import List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.ingredient_application_type_model import (
     IngredientApplicationTypeModel,
@@ -19,6 +19,22 @@ from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.u
 
 # Ingredient model using the enum
 class IngredientModel(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={
+            "example": {
+                "name": "Blanco Tequila",
+                "uoM": "ounces",
+                "requirement": "required",
+                "display": "1 1/2 oz Blanco Tequila",
+                "units": 1.5,
+                "preparation": "none",
+                "suggestions": "",
+                "types": ["spirit"],
+                "applications": ["base"],
+            }
+        }
+    )
+
     name: str = Field(..., description="Name of the ingredient")
     uoM: UofMTypeModel = Field(..., description="Unit of Measure for the ingredient")
     requirement: IngredientRequirementTypeModel = Field(..., description="Requirement type for the ingredient")

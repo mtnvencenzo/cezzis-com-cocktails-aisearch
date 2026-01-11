@@ -2,6 +2,13 @@
 
 import pytest
 
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_search_statistics import (
+    CocktailSearchStatistics,
+)
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_vector_search_result import (
+    CocktailVectorSearchResult,
+)
+
 
 def create_test_cocktail_model(cocktail_id="test-123", title="Test Cocktail"):
     """Helper function to create a minimal CocktailModel for testing."""
@@ -18,7 +25,13 @@ def create_test_cocktail_model(cocktail_id="test-123", title="Test Cocktail"):
         prepTimeMinutes=5,
         searchTiles=[],
         glassware=[],
-        search_statistics=None,
+        search_statistics=CocktailSearchStatistics(
+            total_score=1.0,
+            hit_results=[
+                CocktailVectorSearchResult(score=1.0),
+                CocktailVectorSearchResult(score=0.8),
+            ],
+        ),
     )
 
 
