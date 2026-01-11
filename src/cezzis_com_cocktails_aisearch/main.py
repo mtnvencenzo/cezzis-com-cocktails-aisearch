@@ -32,7 +32,11 @@ oauth_options = injector.get(OAuthOptions)
 
 app = FastAPI(
     responses={
-        "default": {"model": ProblemDetails, "description": "All non-success responses"},
+        "default": {
+            "model": ProblemDetails,
+            "description": "All non-success responses",
+            "content": {"application/problem+json": {"schema": ProblemDetails.model_json_schema()}},
+        },
     }
 )
 app.openapi = lambda: openapi_definition(app, oauth_options)

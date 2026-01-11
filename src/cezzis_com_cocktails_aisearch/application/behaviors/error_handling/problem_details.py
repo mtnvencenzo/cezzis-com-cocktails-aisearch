@@ -20,9 +20,9 @@ class ProblemDetails(BaseModel):
         json_schema_extra={
             "example": {
                 "type": "https://tools.ietf.org/html/rfc7231#section-6.5.1",
-                "title": "Bad Request",
-                "status": 400,
-                "detail": "The request could not be understood by the server",
+                "title": "Unprocessable Entity",
+                "status": 422,
+                "detail": "Validation failed for one or more fields",
                 "instance": "/v1/cocktails/search",
                 "errors": {
                     "freetext": ["Field is required"],

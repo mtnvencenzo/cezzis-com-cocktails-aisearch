@@ -170,7 +170,7 @@ class TestFreeTextQueryHandler:
         mock_cocktail1.search_statistics = CocktailSearchStatistics(total_score=0.9, hit_results=[])
 
         mock_cocktail2 = create_test_cocktail_model("2", "Without Stats")
-        mock_cocktail2.search_statistics = None
+        mock_cocktail2.search_statistics = CocktailSearchStatistics(total_score=0.0, hit_results=[])
 
         mock_repository.search_vectors = AsyncMock(return_value=[mock_cocktail1, mock_cocktail2])
 
