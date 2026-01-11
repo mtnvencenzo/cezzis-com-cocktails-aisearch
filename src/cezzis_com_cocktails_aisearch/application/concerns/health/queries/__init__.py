@@ -1,9 +1,9 @@
-from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.queries.free_text_query import (
-    FreeTextQuery,
-    FreeTextQueryHandler,
+from cezzis_com_cocktails_aisearch.application.concerns.health.queries.health_check_query import (
+    HealthCheckQuery,
+    HealthCheckQueryHandler,
 )
 
 __all__ = [
-    "FreeTextQuery",
-    "FreeTextQueryHandler",
+    "HealthCheckQuery",
+    "HealthCheckQueryHandler",
 ]
