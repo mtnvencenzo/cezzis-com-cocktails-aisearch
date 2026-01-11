@@ -17,6 +17,10 @@ def initialize_opentelemetry() -> None:
     # Make sure to shutdown and gracefully flush the telemetry data on exit
     atexit.register(shutdown_otel)
 
+    # Suppress urllib3 debug logs (used by OTLP exporter) to prevent self-logging
+    logging.getLogger("urllib3").setLevel(logging.INFO)
+    logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
+
     otel_options = get_otel_options()
 
     initialize_otel(
