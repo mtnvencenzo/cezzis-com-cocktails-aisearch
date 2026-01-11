@@ -13,22 +13,13 @@ def openapi_definition(app: FastAPI, oauth_options: OAuthOptions) -> dict:
         routes=app.routes,
     )
 
-    spec = {
-        "auth0": {
-            "type": "oauth2",
-            "flows": {
-                "authorizationCode": {
-                    "authorizationUrl": f"https://{oauth_options.domain}/authorize?audience={oauth_options.audience}",
-                    "tokenUrl": f"https://{oauth_options.domain}/oauth/token",
-                    "scopes": {"write:embeddings": "Create and update cocktail embeddings"},
-                    "x-usePkce": "SHA-256",
-                    "x-defaultClientId": oauth_options.client_id or "",
-                }
-            },
-        }
-    }
-
-    openapi_schema["components"]["securitySchemes"] = spec
-
+    openapi_schema["components"]["securitySchemes"] = generate_openapi_oauth2_scheme(
+        name="auth0",
+        client_id=oauth_options.client_id or "",
+        domain=oauth_options.domain,
+        audience=oauth_options.audience,
+        scopes={"write:embeddings": "Create and update cocktail embeddings"},
+        pkce="SHA-256",
+    )
     app.openapi_schema = openapi_schema
     return app.openapi_schema

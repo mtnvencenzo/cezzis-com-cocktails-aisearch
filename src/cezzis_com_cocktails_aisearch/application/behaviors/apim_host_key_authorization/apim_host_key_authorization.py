@@ -5,7 +5,7 @@ from typing import cast
 
 from fastapi import Request
 
-from cezzis_com_cocktails_aisearch.application.behaviors.error_handling.problem_details import ForbiddenException
+from cezzis_com_cocktails_aisearch.application.behaviors.error_handling.exception_types import ForbiddenException
 from cezzis_com_cocktails_aisearch.domain.config.app_options import AppOptions, get_app_options
 
 _logger = logging.getLogger("apim_host_key_authorization")

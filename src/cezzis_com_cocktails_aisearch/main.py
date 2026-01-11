@@ -4,9 +4,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import ValidationError
 
-from cezzis_com_cocktails_aisearch.apis.embedding import EmbeddingRouter
-from cezzis_com_cocktails_aisearch.apis.scalar_docs import ScalarDocsRouter
-from cezzis_com_cocktails_aisearch.apis.semantic_search import SemanticSearchRouter
+from cezzis_com_cocktails_aisearch.apis import (
+    EmbeddingRouter,
+    HealthCheckRouter,
+    ScalarDocsRouter,
+    SemanticSearchRouter,
+)
 from cezzis_com_cocktails_aisearch.app_module import create_injector
 from cezzis_com_cocktails_aisearch.application.behaviors import initialize_opentelemetry
 from cezzis_com_cocktails_aisearch.application.behaviors.error_handling import (
@@ -15,7 +18,8 @@ from cezzis_com_cocktails_aisearch.application.behaviors.error_handling import (
     problem_details_exception_handler,
     validation_exception_handler,
 )
-from cezzis_com_cocktails_aisearch.application.behaviors.error_handling.problem_details import ProblemDetailsException
+from cezzis_com_cocktails_aisearch.application.behaviors.error_handling.exception_types import ProblemDetailsException
+from cezzis_com_cocktails_aisearch.application.behaviors.error_handling.problem_details import ProblemDetails
 from cezzis_com_cocktails_aisearch.application.behaviors.openapi.openapi_definition import openapi_definition
 from cezzis_com_cocktails_aisearch.domain.config.app_options import AppOptions
 from cezzis_com_cocktails_aisearch.domain.config.oauth_options import OAuthOptions
@@ -26,7 +30,11 @@ app_options = injector.get(AppOptions)
 oauth_options = injector.get(OAuthOptions)
 
 
-app = FastAPI()
+app = FastAPI(
+    responses={
+        "default": {"model": ProblemDetails, "description": "All non-success responses"},
+    }
+)
 app.openapi = lambda: openapi_definition(app, oauth_options)
 
 # Register exception handlers for RFC 7807 Problem Details
@@ -48,3 +56,4 @@ app.add_middleware(
 app.include_router(injector.get(SemanticSearchRouter))
 app.include_router(injector.get(ScalarDocsRouter))
 app.include_router(injector.get(EmbeddingRouter))
+app.include_router(injector.get(HealthCheckRouter))  # type: ignore

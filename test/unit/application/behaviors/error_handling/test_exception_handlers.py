@@ -14,7 +14,7 @@ from cezzis_com_cocktails_aisearch.application.behaviors.error_handling.exceptio
     problem_details_exception_handler,
     validation_exception_handler,
 )
-from cezzis_com_cocktails_aisearch.application.behaviors.error_handling.problem_details import (
+from cezzis_com_cocktails_aisearch.application.behaviors.error_handling.exception_types import (
     BadRequestException,
     ProblemDetailsException,
 )

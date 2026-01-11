@@ -1,12 +1,12 @@
 import os
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from cezzis_com_cocktails_aisearch.application.behaviors.apim_host_key_authorization.apim_host_key_authorization import (
     apim_host_key_authorization,
 )
-from cezzis_com_cocktails_aisearch.application.behaviors.error_handling.problem_details import ForbiddenException
+from cezzis_com_cocktails_aisearch.application.behaviors.error_handling.exception_types import ForbiddenException
 
 
 class TestApimHostKeyAuthorization:

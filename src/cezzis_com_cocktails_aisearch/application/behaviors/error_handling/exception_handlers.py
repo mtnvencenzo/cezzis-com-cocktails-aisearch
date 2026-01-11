@@ -9,9 +9,11 @@ from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 
+from cezzis_com_cocktails_aisearch.application.behaviors.error_handling.exception_types import (
+    ProblemDetailsException,
+)
 from cezzis_com_cocktails_aisearch.application.behaviors.error_handling.problem_details import (
     ProblemDetails,
-    ProblemDetailsException,
 )
 
 _logger = logging.getLogger("exception_handlers")
