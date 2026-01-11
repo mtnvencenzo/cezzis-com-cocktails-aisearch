@@ -1,3 +1,4 @@
+import asyncio
 import logging
 
 from injector import inject
@@ -44,6 +45,8 @@ class CocktailVectorRepository(ICocktailVectorRepository):
             ),
         )
         self.logger = logging.getLogger("cocktail_vector_repository")
+        self._cocktails_cache: list[CocktailModel] | None = None
+        self._cache_lock = asyncio.Lock()
 
     async def delete_vectors(self, cocktail_id: str) -> None:
         self.logger.info(
@@ -146,3 +149,49 @@ class CocktailVectorRepository(ICocktailVectorRepository):
                                 break
 
         return cocktails
+
+    async def get_all_cocktails(self) -> list[CocktailModel]:
+        # Return cached results if available
+        if self._cocktails_cache is not None:
+            self.logger.debug("Returning cached cocktails")
+            return self._cocktails_cache
+
+        # Use lock to prevent concurrent fetches
+        async with self._cache_lock:
+            # Double-check cache after acquiring lock (another request might have populated it)
+            if self._cocktails_cache is not None:
+                self.logger.debug("Returning cached cocktails (after lock)")
+                return self._cocktails_cache
+
+            self.logger.info(msg="Retrieving all cocktails from qdrant")
+
+            cocktails_dict = {}
+            next_offset = None
+
+            while True:
+                points, next_offset = self.qdrant_client.scroll(
+                    collection_name=self.qdrant_options.collection_name,
+                    limit=100,  # Smaller batch size
+                    offset=next_offset,
+                    with_payload=True,
+                )
+
+                for point in points:
+                    payload = point.payload if hasattr(point, "payload") else None
+                    if payload:
+                        metadata = payload.get("metadata")
+                        if metadata:
+                            id = metadata.get("cocktail_id")
+                            if id and id not in cocktails_dict:
+                                cocktailModel: CocktailModel = CocktailModel.model_validate_json(metadata.get("model"))
+                                cocktails_dict[id] = cocktailModel
+
+                # Break if no more results
+                if next_offset is None:
+                    break
+
+            # Cache the results
+            self._cocktails_cache = list(cocktails_dict.values())
+            self.logger.info(f"Cached {len(self._cocktails_cache)} cocktails")
+
+            return self._cocktails_cache

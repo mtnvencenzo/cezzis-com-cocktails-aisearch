@@ -20,3 +20,7 @@ class ICocktailVectorRepository(ABC):
     @abstractmethod
     async def search_vectors(self, free_text: str) -> list[CocktailModel]:
         pass
+
+    @abstractmethod
+    async def get_all_cocktails(self) -> list[CocktailModel]:
+        pass

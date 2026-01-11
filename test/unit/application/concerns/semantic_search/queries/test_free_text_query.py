@@ -188,17 +188,25 @@ class TestFreeTextQueryHandler:
 
     @pytest.mark.anyio
     async def test_handler_with_empty_free_text(self):
-        """Test handler with empty free text defaults to empty string."""
+        """Test handler with empty free text calls get_all_cocktails."""
         mock_repository = AsyncMock()
-        mock_repository.search_vectors = AsyncMock(return_value=[])
+        mock_cocktail1 = create_test_cocktail_model("1", "Cocktail A")
+        mock_cocktail2 = create_test_cocktail_model("2", "Cocktail B")
+        mock_repository.get_all_cocktails = AsyncMock(return_value=[mock_cocktail2, mock_cocktail1])
 
         mock_qdrant_options = MagicMock()
         mock_qdrant_options.semantic_search_total_score_threshold = 0.0
 
         handler = FreeTextQueryHandler(cocktail_vector_repository=mock_repository, qdrant_opotions=mock_qdrant_options)
 
-        query = FreeTextQuery(free_text=None)
-        await handler.handle(query)
+        query = FreeTextQuery(free_text=None, skip=0, take=10)
+        result = await handler.handle(query)
 
-        # Should search with empty string
-        mock_repository.search_vectors.assert_called_once_with(free_text="")
+        # Should call get_all_cocktails, not search_vectors
+        mock_repository.get_all_cocktails.assert_called_once()
+        mock_repository.search_vectors.assert_not_called()
+
+        # Results should be sorted by title and paginated
+        assert len(result) == 2
+        assert result[0].title == "Cocktail A"  # Alphabetically first
+        assert result[1].title == "Cocktail B"

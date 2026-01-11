@@ -53,19 +53,33 @@ class FreeTextQueryHandler:
         self.logger = logging.getLogger("free_text_query_handler")
 
     async def handle(self, command: FreeTextQuery) -> list[CocktailModel]:
-        cocktails = await self.cocktail_vector_repository.search_vectors(free_text=command.free_text or "")
+        if command.free_text:
+            cocktails = await self.cocktail_vector_repository.search_vectors(free_text=command.free_text)
 
-        sorted_cocktails = sorted(
-            cocktails,
-            key=lambda p: getattr(p.search_statistics, "total_score", 0) if p.search_statistics else 0,
-            reverse=True,
-        )
+            sorted_cocktails = sorted(
+                cocktails,
+                key=lambda p: getattr(p.search_statistics, "total_score", 0) if p.search_statistics else 0,
+                reverse=True,
+            )
 
-        filtered_cocktails = [
-            c
-            for c in sorted_cocktails
-            if c.search_statistics
-            and c.search_statistics.total_score > self.qdrant_options.semantic_search_total_score_threshold
-        ]
+            filtered_cocktails = [
+                c
+                for c in sorted_cocktails
+                if c.search_statistics
+                and c.search_statistics.total_score > self.qdrant_options.semantic_search_total_score_threshold
+            ]
 
-        return filtered_cocktails
+            return filtered_cocktails
+
+        else:
+            cocktails = await self.cocktail_vector_repository.get_all_cocktails()
+
+            sorted_cocktails = sorted(
+                cocktails,
+                key=lambda p: p.title or "",
+                reverse=False,
+            )
+
+            skip = command.skip or 0
+            take = command.take or 10
+            return sorted_cocktails[skip : skip + take]
