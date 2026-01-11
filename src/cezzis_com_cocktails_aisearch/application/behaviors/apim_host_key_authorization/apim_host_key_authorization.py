@@ -3,8 +3,9 @@ import os
 from functools import wraps
 from typing import cast
 
-from fastapi import HTTPException, Request
+from fastapi import Request
 
+from cezzis_com_cocktails_aisearch.application.behaviors.error_handling.exception_types import ForbiddenException
 from cezzis_com_cocktails_aisearch.domain.config.app_options import AppOptions, get_app_options
 
 _logger = logging.getLogger("apim_host_key_authorization")
@@ -23,7 +24,7 @@ def apim_host_key_authorization(func):
         else:
             if supplied_host_key != _app_options.apim_host_key:
                 _logger.warning("Host key authorization failed due to invalid supplied host key")
-                raise HTTPException(status_code=403, detail="Invalid host key")
+                raise ForbiddenException(detail="Invalid host key")
 
         return await func(*args, **kwargs)
 

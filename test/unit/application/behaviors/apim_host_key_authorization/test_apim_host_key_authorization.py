@@ -1,12 +1,12 @@
 import os
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
-from fastapi import HTTPException
 
 from cezzis_com_cocktails_aisearch.application.behaviors.apim_host_key_authorization.apim_host_key_authorization import (
     apim_host_key_authorization,
 )
+from cezzis_com_cocktails_aisearch.application.behaviors.error_handling.exception_types import ForbiddenException
 
 
 class TestApimHostKeyAuthorization:
@@ -47,10 +47,10 @@ class TestApimHostKeyAuthorization:
         ) as mock_options:
             mock_options.apim_host_key = "valid-key"
 
-            with pytest.raises(HTTPException) as exc_info:
+            with pytest.raises(ForbiddenException) as exc_info:
                 await mock_endpoint(_rq=mock_request)
 
-            assert exc_info.value.status_code == 403
+            assert exc_info.value.status == 403
             assert exc_info.value.detail == "Invalid host key"
 
     @pytest.mark.anyio
@@ -109,7 +109,7 @@ class TestApimHostKeyAuthorization:
         ) as mock_options:
             mock_options.apim_host_key = "valid-key"
 
-            with pytest.raises(HTTPException) as exc_info:
+            with pytest.raises(ForbiddenException) as exc_info:
                 await mock_endpoint(_rq=mock_request)
 
-            assert exc_info.value.status_code == 403
+            assert exc_info.value.status == 403
