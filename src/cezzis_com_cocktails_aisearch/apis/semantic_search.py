@@ -15,6 +15,7 @@ from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.c
     CocktailsSearchRs,
 )
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.queries.free_text_query import FreeTextQuery
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.queries.type_ahead_query import TypeAheadQuery
 
 
 class SemanticSearchRouter(APIRouter):
@@ -25,6 +26,15 @@ class SemanticSearchRouter(APIRouter):
         self.add_api_route(
             path="/v1/cocktails/search",
             endpoint=self.search,
+            methods=["GET"],
+            responses={
+                200: {"model": CocktailsSearchRs, "description": "Successful search results"},
+            },
+        )
+
+        self.add_api_route(
+            path="/v1/cocktails/typeahead",
+            endpoint=self.typeahead,
             methods=["GET"],
             responses={
                 200: {"model": CocktailsSearchRs, "description": "Successful search results"},
@@ -59,6 +69,31 @@ class SemanticSearchRouter(APIRouter):
             matches=m or [],
             match_exclusive=m_ex or False,
             include=inc or [],
+            filters=fi or [],
+        )
+
+        items = cast(list[CocktailModel], await self.mediator.send_async(query))  # casting due to type hinting issues
+
+        return CocktailsSearchRs(items=items)
+
+    @apim_host_key_authorization
+    async def typeahead(
+        self,
+        _rq: Request,
+        freetext: str | None = Query(None, description="The free text search term to match against"),
+        skip: int | None = Query(0, description="The number of cocktail recipes to skip from the paged response"),
+        take: int | None = Query(10, description="The number of cocktail recipes to take for pagination"),
+        fi: list[str] | None = Query(
+            None, description="An optional list of filters to use when quering the cocktail recipes"
+        ),
+    ) -> CocktailsSearchRs:
+        """
+        Performs a typeahead search for cocktails based on a free text query.
+        """
+        query = TypeAheadQuery(
+            free_text=freetext or "",
+            skip=skip or 0,
+            take=take or 10,
             filters=fi or [],
         )
 
