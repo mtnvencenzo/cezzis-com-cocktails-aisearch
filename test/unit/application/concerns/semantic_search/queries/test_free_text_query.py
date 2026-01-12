@@ -24,7 +24,7 @@ class TestFreeTextQuery:
         assert query.free_text == ""
         assert query.skip == 0
         assert query.take == 10
-        assert query.match == []
+        assert query.matches == []
         assert query.match_exclusive is False
         assert query.include == []
         assert query.filters == []
@@ -35,7 +35,7 @@ class TestFreeTextQuery:
             free_text="tequila cocktails",
             skip=10,
             take=20,
-            match=["margarita"],
+            matches=["margarita"],
             match_exclusive=True,
             include=[],
             filters=["filter1"],
@@ -44,7 +44,7 @@ class TestFreeTextQuery:
         assert query.free_text == "tequila cocktails"
         assert query.skip == 10
         assert query.take == 20
-        assert query.match == ["margarita"]
+        assert query.matches == ["margarita"]
         assert query.match_exclusive is True
         assert query.filters == ["filter1"]
 

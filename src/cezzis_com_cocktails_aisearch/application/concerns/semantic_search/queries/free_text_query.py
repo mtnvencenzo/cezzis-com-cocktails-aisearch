@@ -20,7 +20,7 @@ class FreeTextQuery(GenericQuery[list[tuple[str, float]]]):
         free_text: Optional[str] = "",
         skip: Optional[int] = 0,
         take: Optional[int] = 10,
-        match: Optional[list[str]] = [],
+        matches: Optional[list[str]] = [],
         match_exclusive: Optional[bool] = False,
         include: Optional[list[CocktailDataIncludeModel]] = [],
         filters: Optional[list[str]] = [],
@@ -28,7 +28,7 @@ class FreeTextQuery(GenericQuery[list[tuple[str, float]]]):
         self.free_text = free_text
         self.skip = skip
         self.take = take
-        self.match = match
+        self.matches = matches
         self.match_exclusive = match_exclusive
         self.include = include
         self.filters = filters
@@ -69,10 +69,18 @@ class FreeTextQueryHandler:
                 and c.search_statistics.total_score > self.qdrant_options.semantic_search_total_score_threshold
             ]
 
-            return filtered_cocktails
+            skip = command.skip or 0
+            take = command.take or 10
+            return filtered_cocktails[skip : skip + take]
 
         else:
             cocktails = await self.cocktail_vector_repository.get_all_cocktails()
+            useMatches = command.matches
+
+            if command.match_exclusive and useMatches is None:
+                useMatches = []
+            elif not command.match_exclusive and command.matches is not None and len(command.matches) == 0:
+                useMatches = None
 
             sorted_cocktails = sorted(
                 cocktails,
@@ -80,6 +88,14 @@ class FreeTextQueryHandler:
                 reverse=False,
             )
 
+            filtered_cocktails = [c for c in sorted_cocktails if useMatches is None or (c.id in useMatches)]
+
+            filtered_cocktails = [
+                c
+                for c in filtered_cocktails
+                if not command.free_text or c.title.lower().startswith(command.free_text.lower())
+            ]
+
             skip = command.skip or 0
             take = command.take or 10
-            return sorted_cocktails[skip : skip + take]
+            return filtered_cocktails[skip : skip + take]

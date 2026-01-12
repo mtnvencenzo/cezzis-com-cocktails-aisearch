@@ -33,12 +33,15 @@ oauth_options = injector.get(OAuthOptions)
 app = FastAPI(
     responses={
         "default": {
-            "model": ProblemDetails,
+            "model": ProblemDetails,  # This ensures the model is added to components/schemas
             "description": "All non-success responses",
-            "content": {"application/problem+json": {"schema": ProblemDetails.model_json_schema()}},
+            "content": {"application/problem+json": {"schema": {"$ref": "#/components/schemas/ProblemDetails"}}},
         },
     }
 )
+
+# Ensure ProblemDetails is in the schema components
+app.openapi_schema = None  # Force regeneration if needed
 app.openapi = lambda: openapi_definition(app, oauth_options)
 
 # Register exception handlers for RFC 7807 Problem Details

@@ -56,7 +56,7 @@ class SemanticSearchRouter(APIRouter):
             free_text=freetext or "",
             skip=skip or 0,
             take=take or 10,
-            match=m or [],
+            matches=m or [],
             match_exclusive=m_ex or False,
             include=inc or [],
             filters=fi or [],

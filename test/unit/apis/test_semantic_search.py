@@ -86,5 +86,5 @@ class TestSemanticSearchRouter:
         assert call_args.free_text == ""
         assert call_args.skip == 0
         assert call_args.take == 10
-        assert call_args.match == []
+        assert call_args.matches == []
         assert call_args.match_exclusive is False
