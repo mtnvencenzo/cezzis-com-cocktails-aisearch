@@ -20,7 +20,7 @@ def _convert_nullable_to_3_0(schema: dict[str, Any]) -> dict[str, Any]:
                 # Check if one is null type
                 non_null_schemas = [s for s in any_of if s.get("type") != "null"]
                 null_schemas = [s for s in any_of if s.get("type") == "null"]
-                
+
                 if len(null_schemas) == 1 and len(non_null_schemas) == 1:
                     # Convert to nullable format
                     base_schema = non_null_schemas[0].copy()
@@ -28,14 +28,14 @@ def _convert_nullable_to_3_0(schema: dict[str, Any]) -> dict[str, Any]:
                     # Remove anyOf and replace with nullable schema
                     schema = {k: v for k, v in schema.items() if k != "anyOf"}
                     schema.update(base_schema)
-        
+
         # Recursively process all values in the dict
         for key, value in list(schema.items()):
             if isinstance(value, dict):
                 schema[key] = _convert_nullable_to_3_0(value)
             elif isinstance(value, list):
                 schema[key] = [_convert_nullable_to_3_0(item) if isinstance(item, dict) else item for item in value]
-    
+
     return schema
 
 
@@ -56,9 +56,9 @@ def openapi_definition(app: FastAPI, oauth_options: OAuthOptions) -> dict:
         scopes={"write:embeddings": "Create and update cocktail embeddings"},
         pkce="SHA-256",
     )
-    
+
     # Convert nullable types to OpenAPI 3.0.1 format
     openapi_schema = _convert_nullable_to_3_0(openapi_schema)
-    
+
     app.openapi_schema = openapi_schema
     return app.openapi_schema
