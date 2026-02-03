@@ -1,6 +1,6 @@
 from typing import cast
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Header, Query, Request
 from injector import inject
 from mediatr import Mediator
 
@@ -27,6 +27,7 @@ class SemanticSearchRouter(APIRouter):
             path="/v1/cocktails/search",
             endpoint=self.search,
             methods=["GET"],
+            operation_id="getV1CocktailsSearch",
             responses={
                 200: {"model": CocktailsSearchRs, "description": "Successful search results"},
             },
@@ -36,6 +37,7 @@ class SemanticSearchRouter(APIRouter):
             path="/v1/cocktails/typeahead",
             endpoint=self.typeahead,
             methods=["GET"],
+            operation_id="getV1CocktailsTypeahead",
             responses={
                 200: {"model": CocktailsSearchRs, "description": "Successful search results"},
             },
@@ -45,6 +47,7 @@ class SemanticSearchRouter(APIRouter):
     async def search(
         self,
         _rq: Request,
+        x_key: str = Header(..., alias="X-Key", description="The API gateway subscription key"),
         freetext: str | None = Query(None, description="The free text search term to match against"),
         skip: int | None = Query(0, description="The number of cocktail recipes to skip from the paged response"),
         take: int | None = Query(10, description="The number of cocktail recipes to take for pagination"),
@@ -80,6 +83,7 @@ class SemanticSearchRouter(APIRouter):
     async def typeahead(
         self,
         _rq: Request,
+        x_key: str = Header(..., alias="X-Key", description="The API gateway subscription key"),
         freetext: str | None = Query(None, description="The free text search term to match against"),
         skip: int | None = Query(0, description="The number of cocktail recipes to skip from the paged response"),
         take: int | None = Query(10, description="The number of cocktail recipes to take for pagination"),

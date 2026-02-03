@@ -3,7 +3,7 @@ from typing import cast
 from cezzis_oauth_fastapi import (
     oauth_authorization,
 )
-from fastapi import APIRouter, Body, Request, Response
+from fastapi import APIRouter, Body, Header, Request, Response
 from injector import inject
 from mediatr import Mediator
 
@@ -29,6 +29,7 @@ class EmbeddingRouter(APIRouter):
         self.mediator = mediator
         self.add_api_route(
             path="/v1/cocktails/embeddings",
+            operation_id="putV1CocktailsEmbeddings",
             endpoint=self.embed,
             methods=["PUT"],
             status_code=204,
@@ -42,7 +43,10 @@ class EmbeddingRouter(APIRouter):
     @apim_host_key_authorization
     @oauth_authorization(scopes=["write:embeddings"], config_provider=get_oauth_options)
     async def embed(
-        self, _rq: Request, body: CocktailEmbeddingRq = Body(..., description="The cocktail embedding request")
+        self,
+        _rq: Request,
+        x_key: str = Header(..., alias="X-Key", description="The API gateway subscription key"),
+        body: CocktailEmbeddingRq = Body(..., description="The cocktail embedding request"),
     ) -> Response:
         """
         Performs a semantic search for cocktails based on a free text query.
