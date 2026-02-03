@@ -21,10 +21,10 @@ from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.queries.
 class SemanticSearchRouter(APIRouter):
     @inject
     def __init__(self, mediator: Mediator):
-        super().__init__()
+        super().__init__(prefix="/v1/cocktails", tags=["Semantic Search"])
         self.mediator = mediator
         self.add_api_route(
-            path="/v1/cocktails/search",
+            path="/search",
             endpoint=self.search,
             methods=["GET"],
             operation_id="getV1CocktailsSearch",
@@ -34,7 +34,7 @@ class SemanticSearchRouter(APIRouter):
         )
 
         self.add_api_route(
-            path="/v1/cocktails/typeahead",
+            path="/typeahead",
             endpoint=self.typeahead,
             methods=["GET"],
             operation_id="getV1CocktailsTypeahead",

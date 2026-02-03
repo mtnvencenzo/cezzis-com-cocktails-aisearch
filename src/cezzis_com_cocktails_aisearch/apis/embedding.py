@@ -25,10 +25,10 @@ from cezzis_com_cocktails_aisearch.domain.config.oauth_options import get_oauth_
 class EmbeddingRouter(APIRouter):
     @inject
     def __init__(self, mediator: Mediator):
-        super().__init__()
+        super().__init__(prefix="/v1/cocktails", tags=["Embeddings"])
         self.mediator = mediator
         self.add_api_route(
-            path="/v1/cocktails/embeddings",
+            path="/embeddings",
             operation_id="putV1CocktailsEmbeddings",
             endpoint=self.embed,
             methods=["PUT"],
