@@ -1,3 +1,4 @@
+import difflib
 import logging
 from typing import Optional
 
@@ -310,6 +311,27 @@ class FreeTextQueryHandler:
         "-free",  # e.g., "alcohol-free"
     ]
 
+    # Words that should not be treated as ingredient terms even if they appear
+    # in ingredient names (e.g., "Cocktail Onion" contains "cocktail")
+    _IGNORED_INGREDIENT_WORDS: set[str] = {
+        "cocktail",
+        "cocktails",
+        "drink",
+        "drinks",
+        "recipe",
+        "recipes",
+        "with",
+        "and",
+        "the",
+        "for",
+        "from",
+    }
+
+    # Similarity cutoff for fuzzy matching ingredient terms (0.0 to 1.0)
+    # 0.8 means words need to be at least 80% similar to match
+    # This handles typos like "burbon" -> "bourbon", "vodca" -> "vodka"
+    _FUZZY_MATCH_CUTOFF: float = 0.8
+
     def _extract_ingredient_terms(
         self, search_text: str, all_cocktails: list[CocktailModel]
     ) -> tuple[list[str], list[str]]:
@@ -338,33 +360,55 @@ class FreeTextQueryHandler:
                         ingredient_lower = ingredient.name.lower()
                         all_ingredient_names.add(ingredient_lower)
                         for word in ingredient_lower.split():
-                            if len(word) >= 3:
+                            # Skip common words that shouldn't be treated as ingredients
+                            if len(word) >= 3 and word not in self._IGNORED_INGREDIENT_WORDS:
                                 all_ingredient_words.add(word)
 
-        # Now find which ingredients are mentioned and whether they're excluded
-        for ingredient_word in all_ingredient_words:
-            if ingredient_word in search_lower:
-                # Check if this ingredient is preceded by an exclusion pattern
-                is_excluded = False
-                for pattern in self._EXCLUSION_PATTERNS:
-                    # Check for patterns like "without honey" or "honey-free"
-                    if pattern.endswith("-"):
-                        # Handle suffix patterns like "-free"
-                        if f"{ingredient_word}{pattern}" in search_lower:
-                            is_excluded = True
-                            break
-                    else:
-                        # Handle prefix patterns like "without ", "no "
-                        if f"{pattern}{ingredient_word}" in search_lower:
-                            is_excluded = True
-                            break
+        # Extract query words for fuzzy matching
+        query_words = [w.strip(",.()[]?!") for w in search_lower.split()]
+        query_words = [w for w in query_words if len(w) >= 3 and w not in self._IGNORED_INGREDIENT_WORDS]
 
-                if is_excluded:
-                    if ingredient_word not in exclude_terms:
-                        exclude_terms.append(ingredient_word)
+        # Build a map of query words to their fuzzy-matched ingredient words
+        # This handles typos like "burbon" -> "bourbon"
+        fuzzy_matches: dict[str, str] = {}
+        for query_word in query_words:
+            if query_word in all_ingredient_words:
+                # Exact match
+                fuzzy_matches[query_word] = query_word
+            else:
+                # Try fuzzy matching
+                close_matches = difflib.get_close_matches(
+                    query_word, list(all_ingredient_words), n=1, cutoff=self._FUZZY_MATCH_CUTOFF
+                )
+                if close_matches:
+                    matched_word = close_matches[0]
+                    fuzzy_matches[query_word] = matched_word
+                    self.logger.info(f"Fuzzy matched '{query_word}' -> '{matched_word}'")
+
+        # Now find which ingredients are mentioned and whether they're excluded
+        for query_word, ingredient_word in fuzzy_matches.items():
+            # Check if this ingredient is preceded by an exclusion pattern
+            # Use both the original query word and the matched ingredient word for pattern detection
+            is_excluded = False
+            for pattern in self._EXCLUSION_PATTERNS:
+                # Check for patterns like "without honey" or "honey-free"
+                if pattern.endswith("-"):
+                    # Handle suffix patterns like "-free"
+                    if f"{query_word}{pattern}" in search_lower:
+                        is_excluded = True
+                        break
                 else:
-                    if ingredient_word not in include_terms:
-                        include_terms.append(ingredient_word)
+                    # Handle prefix patterns like "without ", "no "
+                    if f"{pattern}{query_word}" in search_lower:
+                        is_excluded = True
+                        break
+
+            if is_excluded:
+                if ingredient_word not in exclude_terms:
+                    exclude_terms.append(ingredient_word)
+            else:
+                if ingredient_word not in include_terms:
+                    include_terms.append(ingredient_word)
 
         # Also check full ingredient names
         for ingredient_name in all_ingredient_names:
