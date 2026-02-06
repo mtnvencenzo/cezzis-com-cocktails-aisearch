@@ -126,11 +126,16 @@ class CocktailVectorRepository(ICocktailVectorRepository):
                 metadata = payload.get("metadata")
                 if metadata:
                     id = metadata.get("cocktail_id")
+                    score = getattr(point, "score", 0)
                     if id and id not in seen_ids:
                         cocktailModel: CocktailModel = CocktailModel.model_validate_json(metadata.get("model"))
                         cocktailModel.search_statistics = CocktailSearchStatistics(
-                            total_score=getattr(point, "score", 0),
-                            hit_results=[CocktailVectorSearchResult(score=getattr(point, "score", 0))],
+                            total_score=score,
+                            max_score=score,
+                            avg_score=score,
+                            weighted_score=score,
+                            hit_count=1,
+                            hit_results=[CocktailVectorSearchResult(score=score)],
                         )
                         cocktails.append(cocktailModel)
                         seen_ids.add(id)
@@ -140,13 +145,29 @@ class CocktailVectorRepository(ICocktailVectorRepository):
                             if existing_cocktail.id == id:
                                 if existing_cocktail.search_statistics is None:
                                     existing_cocktail.search_statistics = CocktailSearchStatistics(
-                                        total_score=0.0, hit_results=[]
+                                        total_score=0.0,
+                                        max_score=0.0,
+                                        avg_score=0.0,
+                                        weighted_score=0.0,
+                                        hit_count=0,
+                                        hit_results=[],
                                     )
-                                existing_cocktail.search_statistics.total_score += getattr(point, "score", 0)
-                                existing_cocktail.search_statistics.hit_results.append(
-                                    CocktailVectorSearchResult(score=getattr(point, "score", 0))
-                                )
+                                stats = existing_cocktail.search_statistics
+                                stats.total_score += score
+                                stats.max_score = max(stats.max_score, score)
+                                stats.hit_count += 1
+                                stats.hit_results.append(CocktailVectorSearchResult(score=score))
                                 break
+
+        # Calculate final weighted scores for all cocktails
+        for cocktail in cocktails:
+            if cocktail.search_statistics and cocktail.search_statistics.hit_count > 0:
+                stats = cocktail.search_statistics
+                stats.avg_score = stats.total_score / stats.hit_count
+                # Weighted score: average score boosted by hit count (capped at 5 hits for diminishing returns)
+                # This rewards cocktails that match multiple chunks while still prioritizing high-scoring matches
+                hit_boost = 1.0 + (0.1 * min(stats.hit_count - 1, 4))  # Up to 40% boost for 5+ hits
+                stats.weighted_score = stats.avg_score * hit_boost
 
         return cocktails
 

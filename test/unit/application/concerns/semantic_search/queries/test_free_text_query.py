@@ -71,11 +71,16 @@ class TestFreeTextQueryHandler:
         """Test successful query handling."""
         mock_repository = AsyncMock()
         mock_cocktail1 = create_test_cocktail_model("1", "Margarita")
-        mock_cocktail1.search_statistics = CocktailSearchStatistics(total_score=0.9, hit_results=[])
+        mock_cocktail1.search_statistics = CocktailSearchStatistics(
+            total_score=0.9, max_score=0.9, avg_score=0.9, weighted_score=0.9, hit_count=1, hit_results=[]
+        )
         mock_cocktail2 = create_test_cocktail_model("2", "Mojito")
-        mock_cocktail2.search_statistics = CocktailSearchStatistics(total_score=0.8, hit_results=[])
+        mock_cocktail2.search_statistics = CocktailSearchStatistics(
+            total_score=0.8, max_score=0.8, avg_score=0.8, weighted_score=0.8, hit_count=1, hit_results=[]
+        )
 
         mock_repository.search_vectors = AsyncMock(return_value=[mock_cocktail1, mock_cocktail2])
+        mock_repository.get_all_cocktails = AsyncMock(return_value=[mock_cocktail1, mock_cocktail2])
 
         mock_qdrant_options = MagicMock()
         mock_qdrant_options.semantic_search_total_score_threshold = 0.5
@@ -92,20 +97,27 @@ class TestFreeTextQueryHandler:
 
     @pytest.mark.anyio
     async def test_handler_sorts_by_score(self):
-        """Test that results are sorted by total_score descending."""
+        """Test that results are sorted by weighted_score descending."""
         mock_repository = AsyncMock()
 
         mock_cocktail1 = create_test_cocktail_model("1", "Low Score")
-        mock_cocktail1.search_statistics = CocktailSearchStatistics(total_score=0.5, hit_results=[])
+        mock_cocktail1.search_statistics = CocktailSearchStatistics(
+            total_score=0.5, max_score=0.5, avg_score=0.5, weighted_score=0.5, hit_count=1, hit_results=[]
+        )
 
         mock_cocktail2 = create_test_cocktail_model("2", "High Score")
-        mock_cocktail2.search_statistics = CocktailSearchStatistics(total_score=0.9, hit_results=[])
+        mock_cocktail2.search_statistics = CocktailSearchStatistics(
+            total_score=0.9, max_score=0.9, avg_score=0.9, weighted_score=0.9, hit_count=1, hit_results=[]
+        )
 
         mock_cocktail3 = create_test_cocktail_model("3", "Medium Score")
-        mock_cocktail3.search_statistics = CocktailSearchStatistics(total_score=0.7, hit_results=[])
+        mock_cocktail3.search_statistics = CocktailSearchStatistics(
+            total_score=0.7, max_score=0.7, avg_score=0.7, weighted_score=0.7, hit_count=1, hit_results=[]
+        )
 
         # Return in unsorted order
         mock_repository.search_vectors = AsyncMock(return_value=[mock_cocktail1, mock_cocktail2, mock_cocktail3])
+        mock_repository.get_all_cocktails = AsyncMock(return_value=[mock_cocktail1, mock_cocktail2, mock_cocktail3])
 
         mock_qdrant_options = MagicMock()
         mock_qdrant_options.semantic_search_total_score_threshold = 0.0
@@ -126,12 +138,17 @@ class TestFreeTextQueryHandler:
         mock_repository = AsyncMock()
 
         mock_cocktail1 = create_test_cocktail_model("1", "High Score")
-        mock_cocktail1.search_statistics = CocktailSearchStatistics(total_score=0.9, hit_results=[])
+        mock_cocktail1.search_statistics = CocktailSearchStatistics(
+            total_score=0.9, max_score=0.9, avg_score=0.9, weighted_score=0.9, hit_count=1, hit_results=[]
+        )
 
         mock_cocktail2 = create_test_cocktail_model("2", "Low Score")
-        mock_cocktail2.search_statistics = CocktailSearchStatistics(total_score=0.3, hit_results=[])
+        mock_cocktail2.search_statistics = CocktailSearchStatistics(
+            total_score=0.3, max_score=0.3, avg_score=0.3, weighted_score=0.3, hit_count=1, hit_results=[]
+        )
 
         mock_repository.search_vectors = AsyncMock(return_value=[mock_cocktail1, mock_cocktail2])
+        mock_repository.get_all_cocktails = AsyncMock(return_value=[mock_cocktail1, mock_cocktail2])
 
         mock_qdrant_options = MagicMock()
         mock_qdrant_options.semantic_search_total_score_threshold = 0.5
@@ -167,12 +184,17 @@ class TestFreeTextQueryHandler:
         mock_repository = AsyncMock()
 
         mock_cocktail1 = create_test_cocktail_model("1", "With Stats")
-        mock_cocktail1.search_statistics = CocktailSearchStatistics(total_score=0.9, hit_results=[])
+        mock_cocktail1.search_statistics = CocktailSearchStatistics(
+            total_score=0.9, max_score=0.9, avg_score=0.9, weighted_score=0.9, hit_count=1, hit_results=[]
+        )
 
         mock_cocktail2 = create_test_cocktail_model("2", "Without Stats")
-        mock_cocktail2.search_statistics = CocktailSearchStatistics(total_score=0.0, hit_results=[])
+        mock_cocktail2.search_statistics = CocktailSearchStatistics(
+            total_score=0.0, max_score=0.0, avg_score=0.0, weighted_score=0.0, hit_count=0, hit_results=[]
+        )
 
         mock_repository.search_vectors = AsyncMock(return_value=[mock_cocktail1, mock_cocktail2])
+        mock_repository.get_all_cocktails = AsyncMock(return_value=[mock_cocktail1, mock_cocktail2])
 
         mock_qdrant_options = MagicMock()
         mock_qdrant_options.semantic_search_total_score_threshold = 0.5

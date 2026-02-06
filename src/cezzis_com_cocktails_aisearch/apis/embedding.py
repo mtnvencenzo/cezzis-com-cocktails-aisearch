@@ -3,7 +3,7 @@ from typing import cast
 from cezzis_oauth_fastapi import (
     oauth_authorization,
 )
-from fastapi import APIRouter, Body, Header, Request, Response
+from fastapi import APIRouter, Body, Request, Response
 from injector import inject
 from mediatr import Mediator
 
@@ -13,6 +13,7 @@ from cezzis_com_cocktails_aisearch.application.behaviors.apim_host_key_authoriza
 from cezzis_com_cocktails_aisearch.application.behaviors.error_handling.exception_types import (
     InternalServerErrorException,
 )
+from cezzis_com_cocktails_aisearch.application.behaviors.openapi import create_openapi_extra
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.commands.cocktail_embedding_command import (
     CocktailEmbeddingCommand,
 )
@@ -37,7 +38,9 @@ class EmbeddingRouter(APIRouter):
                 204: {"description": "Embedding successful. No content returned."},
             },
             dependencies=[],
-            openapi_extra={"security": [{"auth0": ["write:embeddings"]}]},
+            openapi_extra=create_openapi_extra(
+                security=[{"auth0": ["write:embeddings"]}],
+            ),
         )
 
     @apim_host_key_authorization
@@ -45,7 +48,6 @@ class EmbeddingRouter(APIRouter):
     async def embed(
         self,
         _rq: Request,
-        x_key: str = Header(..., alias="X-Key", description="The API gateway subscription key"),
         body: CocktailEmbeddingRq = Body(..., description="The cocktail embedding request"),
     ) -> Response:
         """

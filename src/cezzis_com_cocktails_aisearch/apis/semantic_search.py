@@ -1,12 +1,13 @@
 from typing import cast
 
-from fastapi import APIRouter, Header, Query, Request
+from fastapi import APIRouter, Query, Request
 from injector import inject
 from mediatr import Mediator
 
 from cezzis_com_cocktails_aisearch.application.behaviors.apim_host_key_authorization.apim_host_key_authorization import (
     apim_host_key_authorization,
 )
+from cezzis_com_cocktails_aisearch.application.behaviors.openapi import create_openapi_extra
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_data_include_model import (
     CocktailDataIncludeModel,
 )
@@ -31,6 +32,7 @@ class SemanticSearchRouter(APIRouter):
             responses={
                 200: {"model": CocktailsSearchRs, "description": "Successful search results"},
             },
+            openapi_extra=create_openapi_extra(),
         )
 
         self.add_api_route(
@@ -41,13 +43,13 @@ class SemanticSearchRouter(APIRouter):
             responses={
                 200: {"model": CocktailsSearchRs, "description": "Successful search results"},
             },
+            openapi_extra=create_openapi_extra(),
         )
 
     @apim_host_key_authorization
     async def search(
         self,
         _rq: Request,
-        x_key: str = Header(..., alias="X-Key", description="The API gateway subscription key"),
         freetext: str | None = Query(None, description="The free text search term to match against"),
         skip: int | None = Query(0, description="The number of cocktail recipes to skip from the paged response"),
         take: int | None = Query(10, description="The number of cocktail recipes to take for pagination"),
@@ -83,7 +85,6 @@ class SemanticSearchRouter(APIRouter):
     async def typeahead(
         self,
         _rq: Request,
-        x_key: str = Header(..., alias="X-Key", description="The API gateway subscription key"),
         freetext: str | None = Query(None, description="The free text search term to match against"),
         skip: int | None = Query(0, description="The number of cocktail recipes to skip from the paged response"),
         take: int | None = Query(10, description="The number of cocktail recipes to take for pagination"),
