@@ -99,15 +99,30 @@ class FreeTextQueryHandler:
                 # This prevents false positives where semantic similarity doesn't match actual content
                 include_terms, exclude_terms = self._extract_ingredient_terms(search_text, all_cocktails)
 
+                self.logger.info(
+                    f"Ingredient filtering: include_terms={include_terms}, exclude_terms={exclude_terms}, "
+                    f"cocktails_before_filter={len(sorted_cocktails)}"
+                )
+
                 if include_terms:
+                    before_count = len(sorted_cocktails)
                     sorted_cocktails = [
                         c for c in sorted_cocktails if self._cocktail_matches_ingredient_terms(c, include_terms)
                     ]
+                    self.logger.info(
+                        f"After include filter: {before_count} -> {len(sorted_cocktails)} "
+                        f"(removed {before_count - len(sorted_cocktails)})"
+                    )
 
                 if exclude_terms:
+                    before_count = len(sorted_cocktails)
                     sorted_cocktails = [
                         c for c in sorted_cocktails if not self._cocktail_matches_ingredient_terms(c, exclude_terms)
                     ]
+                    self.logger.info(
+                        f"After exclude filter: {before_count} -> {len(sorted_cocktails)} "
+                        f"(removed {before_count - len(sorted_cocktails)})"
+                    )
 
             # Apply structured filters (IBA, glassware, ingredient count, prep time, etc.)
             sorted_cocktails = self._apply_structured_filters(search_text, sorted_cocktails)
