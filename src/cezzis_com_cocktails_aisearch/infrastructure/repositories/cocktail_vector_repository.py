@@ -10,6 +10,9 @@ from qdrant_client.http.models import FieldCondition, Filter, MatchValue
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_description_chunk import (
     CocktailDescriptionChunk,
 )
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_keywords import (
+    CocktailKeywords,
+)
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailModel
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_search_statistics import (
     CocktailSearchStatistics,
@@ -35,14 +38,15 @@ class CocktailVectorRepository(ICocktailVectorRepository):
         self.hugging_face_options = hugging_face_options
         self.qdrant_client = qdrant_client
         self.qdrant_options = qdrant_options
+        self._embeddings = HuggingFaceEndpointEmbeddings(
+            model=self.hugging_face_options.inference_model,
+            huggingfacehub_api_token=self.hugging_face_options.api_token,
+            task="feature-extraction",
+        )
         self.vector_store = QdrantVectorStore(
             client=self.qdrant_client,
             collection_name=self.qdrant_options.collection_name,
-            embedding=HuggingFaceEndpointEmbeddings(
-                model=self.hugging_face_options.inference_model,  # http://localhost:8989 | sentence-transformers/all-mpnet-base-v2
-                huggingfacehub_api_token=self.hugging_face_options.api_token,
-                task="feature-extraction",
-            ),
+            embedding=self._embeddings,
         )
         self.logger = logging.getLogger("cocktail_vector_repository")
         self._cocktails_cache: list[CocktailModel] | None = None
@@ -68,7 +72,11 @@ class CocktailVectorRepository(ICocktailVectorRepository):
         )
 
     async def store_vectors(
-        self, cocktail_id: str, chunks: list[CocktailDescriptionChunk], cocktail_model: CocktailModel
+        self,
+        cocktail_id: str,
+        chunks: list[CocktailDescriptionChunk],
+        cocktail_model: CocktailModel,
+        cocktail_keywords: CocktailKeywords | None = None,
     ) -> None:
         self.logger.info(
             msg="Attempting to store cocktail embedding in qdrant",
@@ -76,6 +84,8 @@ class CocktailVectorRepository(ICocktailVectorRepository):
                 "cocktail_id": cocktail_id,
             },
         )
+
+        keywords = cocktail_keywords or CocktailKeywords()
 
         result = self.vector_store.add_texts(
             texts=[chunk.content for chunk in chunks],
@@ -85,6 +95,34 @@ class CocktailVectorRepository(ICocktailVectorRepository):
                     "category": chunk.category,
                     "description": chunk.content,
                     "model": cocktail_model.model_dump_json(),
+                    "title": cocktail_model.title.lower(),
+                    "is_iba": cocktail_model.isIba,
+                    "serves": cocktail_model.serves,
+                    "prep_time_minutes": cocktail_model.prepTimeMinutes,
+                    "ingredient_count": len(cocktail_model.ingredients),
+                    "ingredient_names": [i.name.lower() for i in cocktail_model.ingredients if i.name],
+                    "ingredient_words": list(
+                        {
+                            word.lower()
+                            for i in cocktail_model.ingredients
+                            if i.name
+                            for word in i.name.split()
+                            if len(word) >= 3
+                        }
+                    ),
+                    "glassware_values": [g.value for g in cocktail_model.glassware],
+                    "rating": cocktail_model.rating,
+                    "keywords_base_spirit": keywords.keywordsBaseSpirit,
+                    "keywords_spirit_subtype": keywords.keywordsSpiritSubtype,
+                    "keywords_flavor_profile": keywords.keywordsFlavorProfile,
+                    "keywords_cocktail_family": keywords.keywordsCocktailFamily,
+                    "keywords_technique": keywords.keywordsTechnique,
+                    "keywords_strength": keywords.keywordsStrength,
+                    "keywords_temperature": keywords.keywordsTemperature,
+                    "keywords_season": keywords.keywordsSeason,
+                    "keywords_occasion": keywords.keywordsOccasion,
+                    "keywords_mood": keywords.keywordsMood,
+                    "keywords_search_terms": keywords.keywordsSearchTerms,
                 }
                 for chunk in chunks
             ],
@@ -94,20 +132,15 @@ class CocktailVectorRepository(ICocktailVectorRepository):
         if len(result) == 0:
             raise ValueError("No embedding results returned from vector store")
 
-    async def search_vectors(self, free_text: str) -> list[CocktailModel]:
-        hf_endpoint = HuggingFaceEndpointEmbeddings(
-            model=self.hugging_face_options.inference_model,  # http://localhost:8989 | sentence-transformers/all-mpnet-base-v2
-            huggingfacehub_api_token=self.hugging_face_options.api_token,
-            task="feature-extraction",
-        )
-
-        query_vector = await hf_endpoint.aembed_query(free_text or "")
+    async def search_vectors(self, free_text: str, query_filter: Filter | None = None) -> list[CocktailModel]:
+        query_vector = await self._embeddings.aembed_query(free_text or "")
 
         search_results = self.qdrant_client.query_points(
             collection_name=self.qdrant_options.collection_name,
             limit=self.qdrant_options.semantic_search_limit,
             score_threshold=self.qdrant_options.semantic_search_score_threshold,
             query=query_vector,
+            query_filter=query_filter,
             with_payload=True,
         )
 

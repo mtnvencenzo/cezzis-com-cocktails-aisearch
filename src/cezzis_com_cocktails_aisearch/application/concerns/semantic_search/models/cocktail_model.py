@@ -41,6 +41,8 @@ class CocktailModel(BaseModel):
     searchTiles: List[str] = Field(..., description="Search tiles associated with the cocktail")
     glassware: List[GlasswareTypeModel] = Field(..., description="List of glassware types used for the cocktail")
     search_statistics: CocktailSearchStatistics = Field(
-        CocktailSearchStatistics(total_score=0.0, hit_results=[]),
+        default_factory=lambda: CocktailSearchStatistics(
+            total_score=0.0, max_score=0.0, avg_score=0.0, weighted_score=0.0, hit_count=0, hit_results=[]
+        ),
         description="Search statistics for the cocktail",
     )

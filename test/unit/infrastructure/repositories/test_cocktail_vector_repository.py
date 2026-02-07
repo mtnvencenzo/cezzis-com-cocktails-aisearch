@@ -68,7 +68,7 @@ class TestCocktailVectorRepository:
 
     @pytest.mark.anyio
     async def test_store_vectors_success(self):
-        """Test successful storage of vectors."""
+        """Test successful storage of vectors with enriched metadata."""
         mock_hf_options = MagicMock()
         mock_hf_options.inference_model = "test-model"
         mock_hf_options.api_token = "test-token"
@@ -99,6 +99,33 @@ class TestCocktailVectorRepository:
         await repo.store_vectors("cocktail-123", chunks, cocktail_model)
 
         mock_vector_store.add_texts.assert_called_once()
+
+        # Verify enriched metadata fields are stored
+        call_kwargs = mock_vector_store.add_texts.call_args[1]
+        metadatas = call_kwargs["metadatas"]
+        assert len(metadatas) == 2
+        for metadata in metadatas:
+            assert metadata["cocktail_id"] == "cocktail-123"
+            assert metadata["title"] == "test cocktail"
+            assert "is_iba" in metadata
+            assert "serves" in metadata
+            assert "prep_time_minutes" in metadata
+            assert "ingredient_count" in metadata
+            assert "ingredient_names" in metadata
+            assert "ingredient_words" in metadata
+            assert "glassware_values" in metadata
+            assert "rating" in metadata
+            assert "keywords_base_spirit" in metadata
+            assert "keywords_spirit_subtype" in metadata
+            assert "keywords_flavor_profile" in metadata
+            assert "keywords_cocktail_family" in metadata
+            assert "keywords_technique" in metadata
+            assert "keywords_strength" in metadata
+            assert "keywords_temperature" in metadata
+            assert "keywords_season" in metadata
+            assert "keywords_occasion" in metadata
+            assert "keywords_mood" in metadata
+            assert "keywords_search_terms" in metadata
 
     @pytest.mark.anyio
     async def test_store_vectors_raises_on_empty_result(self):
@@ -188,6 +215,52 @@ class TestCocktailVectorRepository:
         assert result[0].title == "Margarita"
         assert result[0].search_statistics is not None
         assert result[0].search_statistics.total_score == 0.9
+
+        # Verify query_filter=None is used by default
+        call_kwargs = mock_qdrant_client.query_points.call_args[1]
+        assert call_kwargs["query_filter"] is None
+
+    @pytest.mark.anyio
+    async def test_search_vectors_with_filter(self):
+        """Test that query_filter is passed through to Qdrant."""
+        from qdrant_client.http.models import FieldCondition, Filter, MatchValue
+
+        mock_hf_options = MagicMock()
+        mock_hf_options.inference_model = "test-model"
+        mock_hf_options.api_token = "test-token"
+
+        mock_qdrant_client = MagicMock()
+        mock_qdrant_options = MagicMock()
+        mock_qdrant_options.collection_name = "test-collection"
+        mock_qdrant_options.semantic_search_limit = 30
+        mock_qdrant_options.semantic_search_score_threshold = 0.5
+
+        mock_search_results = MagicMock()
+        mock_search_results.points = []
+        mock_qdrant_client.query_points = MagicMock(return_value=mock_search_results)
+
+        test_filter = Filter(must=[FieldCondition(key="metadata.is_iba", match=MatchValue(value=True))])
+
+        with patch(
+            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.QdrantVectorStore"
+        ):
+            with patch(
+                "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
+            ) as mock_hf_class:
+                mock_embeddings = AsyncMock()
+                mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
+                mock_hf_class.return_value = mock_embeddings
+
+                repo = CocktailVectorRepository(
+                    hugging_face_options=mock_hf_options,
+                    qdrant_client=mock_qdrant_client,
+                    qdrant_options=mock_qdrant_options,
+                )
+
+                await repo.search_vectors("iba cocktails", query_filter=test_filter)
+
+        call_kwargs = mock_qdrant_client.query_points.call_args[1]
+        assert call_kwargs["query_filter"] == test_filter
 
     @pytest.mark.anyio
     async def test_search_vectors_handles_duplicates(self):

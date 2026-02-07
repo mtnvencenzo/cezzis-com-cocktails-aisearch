@@ -6,6 +6,9 @@ from mediatr import GenericQuery, Mediator
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_description_chunk import (
     CocktailDescriptionChunk,
 )
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_keywords import (
+    CocktailKeywords,
+)
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailModel
 from cezzis_com_cocktails_aisearch.infrastructure.repositories.icocktail_vector_repository import (
     ICocktailVectorRepository,
@@ -14,9 +17,15 @@ from cezzis_com_cocktails_aisearch.infrastructure.repositories.icocktail_vector_
 
 class CocktailEmbeddingCommand(GenericQuery[bool]):
     @inject
-    def __init__(self, chunks: list[CocktailDescriptionChunk], cocktail_model: CocktailModel):
+    def __init__(
+        self,
+        chunks: list[CocktailDescriptionChunk],
+        cocktail_model: CocktailModel,
+        cocktail_keywords: CocktailKeywords | None = None,
+    ):
         self.chunks = chunks
         self.cocktail_model = cocktail_model
+        self.cocktail_keywords = cocktail_keywords or CocktailKeywords()
 
 
 @Mediator.behavior
@@ -60,6 +69,7 @@ class CocktailEmbeddingCommandHandler:
             cocktail_id=command.cocktail_model.id,
             chunks=[chunk for chunk in command.chunks if chunk.content.strip() != ""],
             cocktail_model=command.cocktail_model,
+            cocktail_keywords=command.cocktail_keywords,
         )
 
         self.logger.info(

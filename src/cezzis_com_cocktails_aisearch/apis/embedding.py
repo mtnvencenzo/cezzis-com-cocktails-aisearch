@@ -53,7 +53,11 @@ class EmbeddingRouter(APIRouter):
         """
         Performs a semantic search for cocktails based on a free text query.
         """
-        command = CocktailEmbeddingCommand(chunks=body.content_chunks, cocktail_model=body.cocktail_model)
+        command = CocktailEmbeddingCommand(
+            chunks=body.content_chunks,
+            cocktail_model=body.cocktail_model,
+            cocktail_keywords=body.cocktail_keywords,
+        )
 
         embedding_result = cast(bool, await self.mediator.send_async(command))  # casting due to type hinting issues
 

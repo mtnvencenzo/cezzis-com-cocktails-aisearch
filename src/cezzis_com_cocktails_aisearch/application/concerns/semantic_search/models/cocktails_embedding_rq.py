@@ -3,6 +3,9 @@ from pydantic import BaseModel, Field
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_description_chunk import (
     CocktailDescriptionChunk,
 )
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_keywords import (
+    CocktailKeywords,
+)
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailModel
 
 
@@ -13,3 +16,6 @@ class CocktailEmbeddingRq(BaseModel):
 
     content_chunks: list[CocktailDescriptionChunk] = Field(..., description="List of text chunks to be embedded")
     cocktail_model: CocktailModel = Field(..., description="Cocktail model associated with the chunks")
+    cocktail_keywords: CocktailKeywords = Field(
+        default_factory=CocktailKeywords, description="Keyword metadata for Qdrant payload filtering"
+    )
