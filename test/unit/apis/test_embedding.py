@@ -2,7 +2,7 @@ import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from conftest import create_test_cocktail_model
+from conftest import create_test_cocktail_embedding_model, create_test_cocktail_model
 from fastapi import Response
 from fastapi.testclient import TestClient
 
@@ -44,10 +44,10 @@ class TestEmbeddingRouter:
         router = EmbeddingRouter(mediator=mediator)
 
         request_mock = MagicMock()
-        cocktail_model = create_test_cocktail_model("test-123", "Test Cocktail")
+        cocktail_model = create_test_cocktail_embedding_model("test-123", "Test Cocktail")
         body = CocktailEmbeddingRq(
             content_chunks=[CocktailDescriptionChunk(content="Test content", category="description")],
-            cocktail_model=cocktail_model,
+            cocktail_embedding_model=cocktail_model,
         )
 
         # Bypass OAuth by setting ENV=local
@@ -66,10 +66,10 @@ class TestEmbeddingRouter:
         router = EmbeddingRouter(mediator=mediator)
 
         request_mock = MagicMock()
-        cocktail_model = create_test_cocktail_model("test-123", "Test Cocktail")
+        cocktail_model = create_test_cocktail_embedding_model("test-123", "Test Cocktail")
         body = CocktailEmbeddingRq(
             content_chunks=[CocktailDescriptionChunk(content="Test content", category="description")],
-            cocktail_model=cocktail_model,
+            cocktail_embedding_model=cocktail_model,
         )
 
         # Bypass OAuth by setting ENV=local

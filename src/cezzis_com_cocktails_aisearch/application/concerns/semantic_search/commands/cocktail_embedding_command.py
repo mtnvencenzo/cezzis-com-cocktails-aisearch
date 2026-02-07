@@ -6,10 +6,12 @@ from mediatr import GenericQuery, Mediator
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_description_chunk import (
     CocktailDescriptionChunk,
 )
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_embedding_model import (
+    CocktailEmbeddingModel,
+)
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_keywords import (
     CocktailKeywords,
 )
-from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailModel
 from cezzis_com_cocktails_aisearch.infrastructure.repositories.icocktail_vector_repository import (
     ICocktailVectorRepository,
 )
@@ -20,19 +22,19 @@ class CocktailEmbeddingCommand(GenericQuery[bool]):
     def __init__(
         self,
         chunks: list[CocktailDescriptionChunk],
-        cocktail_model: CocktailModel,
+        cocktail_embedding_model: CocktailEmbeddingModel,
         cocktail_keywords: CocktailKeywords | None = None,
     ):
         self.chunks = chunks
-        self.cocktail_model = cocktail_model
+        self.cocktail_embedding_model = cocktail_embedding_model
         self.cocktail_keywords = cocktail_keywords or CocktailKeywords()
 
 
 @Mediator.behavior
 class CocktailEmbeddingCommandValidator:
     def handle(self, command: CocktailEmbeddingCommand, next) -> None:
-        if not command.cocktail_model or not command.cocktail_model.id:
-            raise ValueError("Invalid cocktail model provided for embedding processing")
+        if not command.cocktail_embedding_model or not command.cocktail_embedding_model.id:
+            raise ValueError("Invalid cocktail embedding model provided for embedding processing")
 
         if not command.chunks or len(command.chunks) == 0:
             raise ValueError("No chunks provided for embedding processing")
@@ -53,29 +55,29 @@ class CocktailEmbeddingCommandHandler:
         self.logger = logging.getLogger("cocktail_embedding_command_handler")
 
     async def handle(self, command: CocktailEmbeddingCommand) -> bool:
-        assert command.cocktail_model is not None
+        assert command.cocktail_embedding_model is not None
         assert command.chunks is not None
 
         self.logger.info(
             msg="Processing cocktail embedding request",
             extra={
-                "cocktail_id": command.cocktail_model.id,
+                "cocktail_id": command.cocktail_embedding_model.id,
             },
         )
 
-        await self.cocktail_vector_repository.delete_vectors(command.cocktail_model.id)
+        await self.cocktail_vector_repository.delete_vectors(command.cocktail_embedding_model.id)
 
         await self.cocktail_vector_repository.store_vectors(
-            cocktail_id=command.cocktail_model.id,
+            cocktail_id=command.cocktail_embedding_model.id,
             chunks=[chunk for chunk in command.chunks if chunk.content.strip() != ""],
-            cocktail_model=command.cocktail_model,
+            cocktail_model=command.cocktail_embedding_model.to_cocktail_model(),
             cocktail_keywords=command.cocktail_keywords,
         )
 
         self.logger.info(
             msg="Cocktail embedding stored in qdrant successfully",
             extra={
-                "cocktail_id": command.cocktail_model.id,
+                "cocktail_id": command.cocktail_embedding_model.id,
             },
         )
 

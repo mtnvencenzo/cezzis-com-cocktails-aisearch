@@ -55,7 +55,7 @@ class EmbeddingRouter(APIRouter):
         """
         command = CocktailEmbeddingCommand(
             chunks=body.content_chunks,
-            cocktail_model=body.cocktail_model,
+            cocktail_embedding_model=body.cocktail_embedding_model,
             cocktail_keywords=body.cocktail_keywords,
         )
 

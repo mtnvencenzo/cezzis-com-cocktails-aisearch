@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from conftest import create_test_cocktail_model
+from conftest import create_test_cocktail_embedding_model, create_test_cocktail_model
 
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.commands.cocktail_embedding_command import (
     CocktailEmbeddingCommand,
@@ -19,13 +19,13 @@ class TestCocktailEmbeddingCommand:
 
     def test_command_init(self):
         """Test command initialization."""
-        cocktail_model = create_test_cocktail_model("test-123", "Test Cocktail")
+        cocktail_model = create_test_cocktail_embedding_model("test-123", "Test Cocktail")
         chunks = [CocktailDescriptionChunk(content="Test content", category="desc")]
 
-        command = CocktailEmbeddingCommand(chunks=chunks, cocktail_model=cocktail_model)
+        command = CocktailEmbeddingCommand(chunks=chunks, cocktail_embedding_model=cocktail_model)
 
         assert command.chunks == chunks
-        assert command.cocktail_model == cocktail_model
+        assert command.cocktail_embedding_model == cocktail_model
 
 
 class TestCocktailEmbeddingCommandValidator:
@@ -33,9 +33,9 @@ class TestCocktailEmbeddingCommandValidator:
 
     def test_validator_success(self):
         """Test successful validation."""
-        cocktail_model = create_test_cocktail_model("test-123", "Test Cocktail")
+        cocktail_model = create_test_cocktail_embedding_model("test-123", "Test Cocktail")
         chunks = [CocktailDescriptionChunk(content="Test content", category="desc")]
-        command = CocktailEmbeddingCommand(chunks=chunks, cocktail_model=cocktail_model)
+        command = CocktailEmbeddingCommand(chunks=chunks, cocktail_embedding_model=cocktail_model)
 
         validator = CocktailEmbeddingCommandValidator()
         next_mock = MagicMock()
@@ -47,30 +47,30 @@ class TestCocktailEmbeddingCommandValidator:
     def test_validator_raises_on_missing_cocktail_model(self):
         """Test validator raises error when cocktail model is missing."""
         chunks = [CocktailDescriptionChunk(content="Test", category="desc")]
-        command = CocktailEmbeddingCommand(chunks=chunks, cocktail_model=None)  # type: ignore
+        command = CocktailEmbeddingCommand(chunks=chunks, cocktail_embedding_model=None)  # type: ignore
 
         validator = CocktailEmbeddingCommandValidator()
         next_mock = MagicMock()
 
-        with pytest.raises(ValueError, match="Invalid cocktail model"):
+        with pytest.raises(ValueError, match="Invalid cocktail embedding model"):
             validator.handle(command, next_mock)
 
     def test_validator_raises_on_missing_cocktail_id(self):
         """Test validator raises error when cocktail id is missing."""
-        cocktail_model = create_test_cocktail_model("", "Test")
+        cocktail_model = create_test_cocktail_embedding_model("", "Test")
         chunks = [CocktailDescriptionChunk(content="Test", category="desc")]
-        command = CocktailEmbeddingCommand(chunks=chunks, cocktail_model=cocktail_model)
+        command = CocktailEmbeddingCommand(chunks=chunks, cocktail_embedding_model=cocktail_model)
 
         validator = CocktailEmbeddingCommandValidator()
         next_mock = MagicMock()
 
-        with pytest.raises(ValueError, match="Invalid cocktail model"):
+        with pytest.raises(ValueError, match="Invalid cocktail embedding model"):
             validator.handle(command, next_mock)
 
     def test_validator_raises_on_empty_chunks(self):
         """Test validator raises error when chunks are empty."""
-        cocktail_model = create_test_cocktail_model("test-123", "Test")
-        command = CocktailEmbeddingCommand(chunks=[], cocktail_model=cocktail_model)
+        cocktail_model = create_test_cocktail_embedding_model("test-123", "Test")
+        command = CocktailEmbeddingCommand(chunks=[], cocktail_embedding_model=cocktail_model)
 
         validator = CocktailEmbeddingCommandValidator()
         next_mock = MagicMock()
@@ -80,12 +80,12 @@ class TestCocktailEmbeddingCommandValidator:
 
     def test_validator_raises_on_all_empty_content_chunks(self):
         """Test validator raises error when all chunks have empty content."""
-        cocktail_model = create_test_cocktail_model("test-123", "Test")
+        cocktail_model = create_test_cocktail_embedding_model("test-123", "Test")
         chunks = [
             CocktailDescriptionChunk(content="  ", category="desc"),
             CocktailDescriptionChunk(content="", category="ingredients"),
         ]
-        command = CocktailEmbeddingCommand(chunks=chunks, cocktail_model=cocktail_model)
+        command = CocktailEmbeddingCommand(chunks=chunks, cocktail_embedding_model=cocktail_model)
 
         validator = CocktailEmbeddingCommandValidator()
         next_mock = MagicMock()
@@ -106,9 +106,9 @@ class TestCocktailEmbeddingCommandHandler:
 
         handler = CocktailEmbeddingCommandHandler(cocktail_vector_repository=mock_repository)
 
-        cocktail_model = create_test_cocktail_model("test-123", "Test Cocktail")
+        cocktail_embedding_model = create_test_cocktail_embedding_model("test-123", "Test Cocktail")
         chunks = [CocktailDescriptionChunk(content="Test content", category="desc")]
-        command = CocktailEmbeddingCommand(chunks=chunks, cocktail_model=cocktail_model)
+        command = CocktailEmbeddingCommand(chunks=chunks, cocktail_embedding_model=cocktail_embedding_model)
 
         result = await handler.handle(command)
 
@@ -125,13 +125,13 @@ class TestCocktailEmbeddingCommandHandler:
 
         handler = CocktailEmbeddingCommandHandler(cocktail_vector_repository=mock_repository)
 
-        cocktail_model = create_test_cocktail_model("test-123", "Test Cocktail")
+        cocktail_embedding_model = create_test_cocktail_embedding_model("test-123", "Test Cocktail")
         chunks = [
             CocktailDescriptionChunk(content="Valid content", category="desc"),
             CocktailDescriptionChunk(content="  ", category="empty"),
             CocktailDescriptionChunk(content="Another valid", category="ingredients"),
         ]
-        command = CocktailEmbeddingCommand(chunks=chunks, cocktail_model=cocktail_model)
+        command = CocktailEmbeddingCommand(chunks=chunks, cocktail_embedding_model=cocktail_embedding_model)
 
         await handler.handle(command)
 
@@ -158,9 +158,9 @@ class TestCocktailEmbeddingCommandHandler:
 
         handler = CocktailEmbeddingCommandHandler(cocktail_vector_repository=mock_repository)
 
-        cocktail_model = create_test_cocktail_model("test-123", "Test")
+        cocktail_embedding_model = create_test_cocktail_embedding_model("test-123", "Test")
         chunks = [CocktailDescriptionChunk(content="Test", category="desc")]
-        command = CocktailEmbeddingCommand(chunks=chunks, cocktail_model=cocktail_model)
+        command = CocktailEmbeddingCommand(chunks=chunks, cocktail_embedding_model=cocktail_embedding_model)
 
         await handler.handle(command)
 
