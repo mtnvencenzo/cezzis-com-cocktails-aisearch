@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class IngredientTypeModel(str, Enum):
+class CocktailSearchIngredientTypeModel(str, Enum):
     """The types of ingredients used in cocktails."""
 
     Herb = "herb"

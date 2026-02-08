@@ -11,7 +11,7 @@ from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.commands
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_description_chunk import (
     CocktailDescriptionChunk,
 )
-from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailModel
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailSearchModel
 
 
 class TestCocktailEmbeddingCommand:

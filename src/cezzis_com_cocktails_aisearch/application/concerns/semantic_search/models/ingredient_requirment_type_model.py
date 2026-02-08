@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class IngredientRequirementTypeModel(str, Enum):
+class CocktailSearchIngredientRequirementTypeModel(str, Enum):
     """The requirement types for cocktail ingredients."""
 
     none = "none"

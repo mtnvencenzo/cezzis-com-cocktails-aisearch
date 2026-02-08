@@ -9,9 +9,9 @@ from cezzis_com_cocktails_aisearch.application.behaviors.apim_host_key_authoriza
 )
 from cezzis_com_cocktails_aisearch.application.behaviors.openapi import create_openapi_extra
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_data_include_model import (
-    CocktailDataIncludeModel,
+    CocktailSearchDataIncludeModel,
 )
-from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailModel
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailSearchModel
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktails_search_rs import (
     CocktailsSearchRs,
 )
@@ -57,7 +57,7 @@ class SemanticSearchRouter(APIRouter):
         m_ex: bool | None = Query(
             False, description="Whether or not the supplied matches must be exclusively returned"
         ),
-        inc: list[CocktailDataIncludeModel] | None = Query(
+        inc: list[CocktailSearchDataIncludeModel] | None = Query(
             None, description="The list of extension objects to include for each cocktail recipe"
         ),
         fi: list[str] | None = Query(
@@ -77,7 +77,9 @@ class SemanticSearchRouter(APIRouter):
             filters=fi or [],
         )
 
-        items = cast(list[CocktailModel], await self.mediator.send_async(query))  # casting due to type hinting issues
+        items = cast(
+            list[CocktailSearchModel], await self.mediator.send_async(query)
+        )  # casting due to type hinting issues
 
         return CocktailsSearchRs(items=items)
 
@@ -102,6 +104,8 @@ class SemanticSearchRouter(APIRouter):
             filters=fi or [],
         )
 
-        items = cast(list[CocktailModel], await self.mediator.send_async(query))  # casting due to type hinting issues
+        items = cast(
+            list[CocktailSearchModel], await self.mediator.send_async(query)
+        )  # casting due to type hinting issues
 
         return CocktailsSearchRs(items=items)

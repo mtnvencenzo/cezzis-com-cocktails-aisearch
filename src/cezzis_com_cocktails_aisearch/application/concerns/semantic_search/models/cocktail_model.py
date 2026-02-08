@@ -7,12 +7,14 @@ from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.c
     CocktailSearchStatistics,
 )
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.glassware_type_model import (
-    GlasswareTypeModel,
+    CocktailSearchGlasswareTypeModel,
 )
-from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.ingredient_model import IngredientModel
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.ingredient_model import (
+    CocktailSearchIngredientModel,
+)
 
 
-class CocktailModel(BaseModel):
+class CocktailSearchModel(BaseModel):
     """Model representing the cocktail data structure used for vector search and storage."""
 
     model_config = ConfigDict(
@@ -32,7 +34,7 @@ class CocktailModel(BaseModel):
         examples=["The Old Fashioned: A Timeless Whiskey Cocktail"],
     )
     rating: float = Field(..., description="Rating of the cocktail", examples=[4.5])
-    ingredients: List[IngredientModel] = Field(..., description="List of ingredients in the cocktail")
+    ingredients: List[CocktailSearchIngredientModel] = Field(..., description="List of ingredients in the cocktail")
     is_iba: bool = Field(..., description="Indicates if the cocktail is an IBA official cocktail", examples=[True])
     serves: int = Field(..., description="Number of servings", examples=[1])
     prep_time_minutes: int = Field(..., description="Preparation time in minutes", examples=[5])
@@ -41,7 +43,7 @@ class CocktailModel(BaseModel):
         description="Search tiles associated with the cocktail",
         examples=["http://localhost:7179/api/v1/images/old-fashioned-cocktail-300x300.webp"],
     )
-    glassware: List[GlasswareTypeModel] = Field(
+    glassware: List[CocktailSearchGlasswareTypeModel] = Field(
         ..., description="List of glassware types used for the cocktail", examples=["rocks", "coupe", "cocktailGlass"]
     )
     search_statistics: CocktailSearchStatistics = Field(

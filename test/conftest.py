@@ -5,6 +5,7 @@ import pytest
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_embedding_model import (
     CocktailEmbeddingModel,
 )
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailSearchModel
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_search_statistics import (
     CocktailSearchStatistics,
 )
@@ -15,18 +16,17 @@ from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.c
 
 def create_test_cocktail_model(cocktail_id="test-123", title="Test Cocktail"):
     """Helper function to create a minimal CocktailModel for testing."""
-    from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailModel
 
-    return CocktailModel(
+    return CocktailSearchModel(
         id=cocktail_id,
         title=title,
-        descriptiveTitle=f"{title} Description",
+        descriptive_title=f"{title} Description",
         rating=4.5,
         ingredients=[],
-        isIba=False,
+        is_iba=False,
         serves=1,
-        prepTimeMinutes=5,
-        searchTiles=[],
+        prep_time_minutes=5,
+        search_tiles=[],
         glassware=[],
         search_statistics=CocktailSearchStatistics(
             total_score=1.0,
@@ -48,13 +48,13 @@ def create_test_cocktail_embedding_model(cocktail_id="test-123", title="Test Coc
     return CocktailEmbeddingModel(
         id=cocktail_id,
         title=title,
-        descriptiveTitle=f"{title} Description",
+        descriptive_title=f"{title} Description",
         rating=4.5,
         ingredients=[],
-        isIba=False,
+        is_iba=False,
         serves=1,
-        prepTimeMinutes=5,
-        searchTiles=[],
+        prep_time_minutes=5,
+        search_tiles=[],
         glassware=[],
     )
 

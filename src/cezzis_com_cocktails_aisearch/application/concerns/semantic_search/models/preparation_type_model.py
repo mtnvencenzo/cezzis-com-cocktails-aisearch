@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class PreparationTypeModel(str, Enum):
+class CocktailSearchPreparationTypeModel(str, Enum):
     """The preparation types for cocktail ingredients."""
 
     None_ = "none"

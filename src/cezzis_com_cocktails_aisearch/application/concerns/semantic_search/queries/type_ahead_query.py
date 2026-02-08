@@ -4,7 +4,7 @@ from typing import Optional
 from injector import inject
 from mediatr import GenericQuery, Mediator
 
-from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailModel
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailSearchModel
 from cezzis_com_cocktails_aisearch.domain.config.qdrant_options import QdrantOptions
 from cezzis_com_cocktails_aisearch.infrastructure.repositories.icocktail_vector_repository import (
     ICocktailVectorRepository,
@@ -43,7 +43,7 @@ class TypeAheadQueryHandler:
         self.qdrant_options = qdrant_opotions
         self.logger = logging.getLogger("type_ahead_query_handler")
 
-    async def handle(self, command: TypeAheadQuery) -> list[CocktailModel]:
+    async def handle(self, command: TypeAheadQuery) -> list[CocktailSearchModel]:
         cocktails = await self.cocktail_vector_repository.get_all_cocktails()
 
         sorted_cocktails = sorted(

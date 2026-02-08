@@ -7,9 +7,9 @@ from mediatr import GenericQuery, Mediator
 from qdrant_client.http.models import Condition, FieldCondition, Filter, MatchValue, Range
 
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_data_include_model import (
-    CocktailDataIncludeModel,
+    CocktailSearchDataIncludeModel,
 )
-from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailModel
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailSearchModel
 from cezzis_com_cocktails_aisearch.domain.config.qdrant_options import QdrantOptions
 from cezzis_com_cocktails_aisearch.infrastructure.repositories.icocktail_vector_repository import (
     ICocktailVectorRepository,
@@ -24,7 +24,7 @@ class FreeTextQuery(GenericQuery[list[tuple[str, float]]]):
         take: Optional[int] = 10,
         matches: Optional[list[str]] = [],
         match_exclusive: Optional[bool] = False,
-        include: Optional[list[CocktailDataIncludeModel]] = [],
+        include: Optional[list[CocktailSearchDataIncludeModel]] = [],
         filters: Optional[list[str]] = [],
     ):
         self.free_text = free_text
@@ -87,7 +87,7 @@ class FreeTextQueryHandler:
         self.qdrant_options = qdrant_opotions
         self.logger = logging.getLogger("free_text_query_handler")
 
-    async def handle(self, command: FreeTextQuery) -> list[CocktailModel]:
+    async def handle(self, command: FreeTextQuery) -> list[CocktailSearchModel]:
         if not command.free_text:
             return await self._handle_browse(command)
 
@@ -128,7 +128,7 @@ class FreeTextQueryHandler:
         take = command.take or 10
         return sorted_cocktails[skip : skip + take]
 
-    async def _handle_browse(self, command: FreeTextQuery) -> list[CocktailModel]:
+    async def _handle_browse(self, command: FreeTextQuery) -> list[CocktailSearchModel]:
         """Handle browsing when no free text is provided."""
         cocktails = await self.cocktail_vector_repository.get_all_cocktails()
         use_matches = command.matches
@@ -146,8 +146,8 @@ class FreeTextQueryHandler:
         return filtered_cocktails[skip : skip + take]
 
     def _find_exact_name_match(
-        self, search_text: str, all_cocktails: list[CocktailModel]
-    ) -> list[CocktailModel] | None:
+        self, search_text: str, all_cocktails: list[CocktailSearchModel]
+    ) -> list[CocktailSearchModel] | None:
         """
         Check if the search text matches cocktail names.
         Returns cocktails where:
@@ -184,8 +184,8 @@ class FreeTextQueryHandler:
         return None
 
     def _handle_short_query(
-        self, search_text: str, all_cocktails: list[CocktailModel], command: FreeTextQuery
-    ) -> list[CocktailModel]:
+        self, search_text: str, all_cocktails: list[CocktailSearchModel], command: FreeTextQuery
+    ) -> list[CocktailSearchModel]:
         """Handle queries too short for meaningful semantic search."""
         filtered = [c for c in all_cocktails if self._matches_text_search(c, search_text)]
         sorted_cocktails = sorted(filtered, key=lambda p: p.title or "")
@@ -194,7 +194,7 @@ class FreeTextQueryHandler:
         take = command.take or 10
         return sorted_cocktails[skip : skip + take]
 
-    def _matches_text_search(self, cocktail: CocktailModel, search_text: str) -> bool:
+    def _matches_text_search(self, cocktail: CocktailSearchModel, search_text: str) -> bool:
         """Check if cocktail matches a text-based search (title, descriptive title, ingredients)."""
         if cocktail.title and search_text in cocktail.title.lower():
             return True

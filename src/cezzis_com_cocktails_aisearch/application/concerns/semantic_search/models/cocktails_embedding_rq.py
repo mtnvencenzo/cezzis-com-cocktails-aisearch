@@ -8,7 +8,7 @@ from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.c
     CocktailEmbeddingModel,
 )
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_keywords import (
-    CocktailKeywords,
+    CocktailSearchKeywords,
 )
 
 
@@ -24,6 +24,6 @@ class CocktailEmbeddingRq(BaseModel):
     cocktail_embedding_model: CocktailEmbeddingModel = Field(
         ..., description="Cocktail embedding model associated with the chunks"
     )
-    cocktail_keywords: CocktailKeywords = Field(
-        default_factory=CocktailKeywords, description="Keyword metadata for Qdrant payload filtering"
+    cocktail_keywords: CocktailSearchKeywords = Field(
+        default_factory=CocktailSearchKeywords, description="Keyword metadata for Qdrant payload filtering"
     )

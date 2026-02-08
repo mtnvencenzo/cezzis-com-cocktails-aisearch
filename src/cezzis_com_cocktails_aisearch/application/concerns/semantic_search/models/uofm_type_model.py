@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class UofMTypeModel(str, Enum):
+class CocktailSearchUofMTypeModel(str, Enum):
     """The unit of measurment types for cocktail ingredients."""
 
     None_ = "none"

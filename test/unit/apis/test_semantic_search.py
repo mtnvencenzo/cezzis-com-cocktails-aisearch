@@ -4,7 +4,7 @@ import pytest
 from conftest import create_test_cocktail_model
 
 from cezzis_com_cocktails_aisearch.apis.semantic_search import SemanticSearchRouter
-from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailModel
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailSearchModel
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktails_search_rs import (
     CocktailsSearchRs,
 )

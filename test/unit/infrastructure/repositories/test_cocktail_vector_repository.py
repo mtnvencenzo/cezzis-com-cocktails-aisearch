@@ -6,7 +6,7 @@ from conftest import create_test_cocktail_model
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_description_chunk import (
     CocktailDescriptionChunk,
 )
-from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailModel
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailSearchModel
 from cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository import (
     CocktailVectorRepository,
 )

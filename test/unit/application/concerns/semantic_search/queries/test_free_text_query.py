@@ -4,7 +4,7 @@ import pytest
 from conftest import create_test_cocktail_model
 from qdrant_client.http.models import FieldCondition, Filter, MatchValue, Range
 
-from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailModel
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailSearchModel
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_search_statistics import (
     CocktailSearchStatistics,
 )

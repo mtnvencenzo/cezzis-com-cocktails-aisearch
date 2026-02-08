@@ -6,9 +6,9 @@ from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.c
     CocktailDescriptionChunk,
 )
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_keywords import (
-    CocktailKeywords,
+    CocktailSearchKeywords,
 )
-from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailModel
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailSearchModel
 
 
 class ICocktailVectorRepository(ABC):
@@ -21,15 +21,15 @@ class ICocktailVectorRepository(ABC):
         self,
         cocktail_id: str,
         chunks: list[CocktailDescriptionChunk],
-        cocktail_model: CocktailModel,
-        cocktail_keywords: CocktailKeywords | None = None,
+        cocktail_model: CocktailSearchModel,
+        cocktail_keywords: CocktailSearchKeywords | None = None,
     ) -> None:
         pass
 
     @abstractmethod
-    async def search_vectors(self, free_text: str, query_filter: Filter | None = None) -> list[CocktailModel]:
+    async def search_vectors(self, free_text: str, query_filter: Filter | None = None) -> list[CocktailSearchModel]:
         pass
 
     @abstractmethod
-    async def get_all_cocktails(self) -> list[CocktailModel]:
+    async def get_all_cocktails(self) -> list[CocktailSearchModel]:
         pass

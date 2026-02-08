@@ -11,9 +11,9 @@ from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.c
     CocktailDescriptionChunk,
 )
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_keywords import (
-    CocktailKeywords,
+    CocktailSearchKeywords,
 )
-from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailModel
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailSearchModel
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_search_statistics import (
     CocktailSearchStatistics,
 )
@@ -49,7 +49,7 @@ class CocktailVectorRepository(ICocktailVectorRepository):
             embedding=self._embeddings,
         )
         self.logger = logging.getLogger("cocktail_vector_repository")
-        self._cocktails_cache: list[CocktailModel] | None = None
+        self._cocktails_cache: list[CocktailSearchModel] | None = None
         self._cache_lock = asyncio.Lock()
 
     async def delete_vectors(self, cocktail_id: str) -> None:
@@ -75,8 +75,8 @@ class CocktailVectorRepository(ICocktailVectorRepository):
         self,
         cocktail_id: str,
         chunks: list[CocktailDescriptionChunk],
-        cocktail_model: CocktailModel,
-        cocktail_keywords: CocktailKeywords | None = None,
+        cocktail_model: CocktailSearchModel,
+        cocktail_keywords: CocktailSearchKeywords | None = None,
     ) -> None:
         self.logger.info(
             msg="Attempting to store cocktail embedding in qdrant",
@@ -85,7 +85,7 @@ class CocktailVectorRepository(ICocktailVectorRepository):
             },
         )
 
-        keywords = cocktail_keywords or CocktailKeywords()
+        keywords = cocktail_keywords or CocktailSearchKeywords()
 
         result = self.vector_store.add_texts(
             texts=[chunk.content for chunk in chunks],
@@ -132,7 +132,7 @@ class CocktailVectorRepository(ICocktailVectorRepository):
         if len(result) == 0:
             raise ValueError("No embedding results returned from vector store")
 
-    async def search_vectors(self, free_text: str, query_filter: Filter | None = None) -> list[CocktailModel]:
+    async def search_vectors(self, free_text: str, query_filter: Filter | None = None) -> list[CocktailSearchModel]:
         query_vector = await self._embeddings.aembed_query(free_text or "")
 
         search_results = self.qdrant_client.query_points(
@@ -147,7 +147,7 @@ class CocktailVectorRepository(ICocktailVectorRepository):
         if len(query_vector) == 0:
             raise ValueError("Failed to generate embeddings for the provided text")
 
-        cocktails: list[CocktailModel] = []
+        cocktails: list[CocktailSearchModel] = []
 
         # Sort points by score descending
         sorted_points = sorted(search_results.points, key=lambda p: getattr(p, "score", 0), reverse=True)
@@ -161,7 +161,9 @@ class CocktailVectorRepository(ICocktailVectorRepository):
                     id = metadata.get("cocktail_id")
                     score = getattr(point, "score", 0)
                     if id and id not in seen_ids:
-                        cocktailModel: CocktailModel = CocktailModel.model_validate_json(metadata.get("model"))
+                        cocktailModel: CocktailSearchModel = CocktailSearchModel.model_validate_json(
+                            metadata.get("model")
+                        )
                         cocktailModel.search_statistics = CocktailSearchStatistics(
                             total_score=score,
                             max_score=score,
@@ -204,7 +206,7 @@ class CocktailVectorRepository(ICocktailVectorRepository):
 
         return cocktails
 
-    async def get_all_cocktails(self) -> list[CocktailModel]:
+    async def get_all_cocktails(self) -> list[CocktailSearchModel]:
         # Return cached results if available
         if self._cocktails_cache is not None:
             self.logger.debug("Returning cached cocktails")
@@ -237,7 +239,9 @@ class CocktailVectorRepository(ICocktailVectorRepository):
                         if metadata:
                             id = metadata.get("cocktail_id")
                             if id and id not in cocktails_dict:
-                                cocktailModel: CocktailModel = CocktailModel.model_validate_json(metadata.get("model"))
+                                cocktailModel: CocktailSearchModel = CocktailSearchModel.model_validate_json(
+                                    metadata.get("model")
+                                )
                                 cocktails_dict[id] = cocktailModel
 
                 # Break if no more results

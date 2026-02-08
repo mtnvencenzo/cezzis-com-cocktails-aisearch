@@ -10,7 +10,7 @@ from cezzis_com_cocktails_aisearch.apis.embedding import EmbeddingRouter
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_description_chunk import (
     CocktailDescriptionChunk,
 )
-from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailModel
+from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailSearchModel
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktails_embedding_rq import (
     CocktailEmbeddingRq,
 )

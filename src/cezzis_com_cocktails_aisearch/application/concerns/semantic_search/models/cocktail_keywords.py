@@ -4,7 +4,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 
-class CocktailKeywords(BaseModel):
+class CocktailSearchKeywords(BaseModel):
     """Keyword metadata for Qdrant payload filtering. Not returned in search responses."""
 
     model_config = ConfigDict(

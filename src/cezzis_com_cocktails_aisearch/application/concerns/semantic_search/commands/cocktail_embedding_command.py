@@ -10,7 +10,7 @@ from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.c
     CocktailEmbeddingModel,
 )
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_keywords import (
-    CocktailKeywords,
+    CocktailSearchKeywords,
 )
 from cezzis_com_cocktails_aisearch.infrastructure.repositories.icocktail_vector_repository import (
     ICocktailVectorRepository,
@@ -23,11 +23,11 @@ class CocktailEmbeddingCommand(GenericQuery[bool]):
         self,
         chunks: list[CocktailDescriptionChunk],
         cocktail_embedding_model: CocktailEmbeddingModel,
-        cocktail_keywords: CocktailKeywords | None = None,
+        cocktail_keywords: CocktailSearchKeywords | None = None,
     ):
         self.chunks = chunks
         self.cocktail_embedding_model = cocktail_embedding_model
-        self.cocktail_keywords = cocktail_keywords or CocktailKeywords()
+        self.cocktail_keywords = cocktail_keywords or CocktailSearchKeywords()
 
 
 @Mediator.behavior
