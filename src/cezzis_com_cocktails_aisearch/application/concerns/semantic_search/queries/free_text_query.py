@@ -198,7 +198,7 @@ class FreeTextQueryHandler:
         """Check if cocktail matches a text-based search (title, descriptive title, ingredients)."""
         if cocktail.title and search_text in cocktail.title.lower():
             return True
-        if cocktail.descriptiveTitle and search_text in cocktail.descriptiveTitle.lower():
+        if cocktail.descriptive_title and search_text in cocktail.descriptive_title.lower():
             return True
         if cocktail.ingredients:
             for ingredient in cocktail.ingredients:

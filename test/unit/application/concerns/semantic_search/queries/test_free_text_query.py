@@ -226,8 +226,12 @@ class TestFreeTextQueryHandler:
         call_kwargs = mock_repository.search_vectors.call_args[1]
         query_filter = call_kwargs["query_filter"]
         assert query_filter is not None
+        assert isinstance(query_filter.must, list)
         assert len(query_filter.must) == 1
+        assert isinstance(query_filter.must[0], FieldCondition)
         assert query_filter.must[0].key == "metadata.is_iba"
+        assert query_filter.must[0].match is not None
+        assert isinstance(query_filter.must[0].match, MatchValue)
         assert query_filter.must[0].match.value is True
 
     @pytest.mark.anyio
@@ -248,8 +252,12 @@ class TestFreeTextQueryHandler:
         query_filter = call_kwargs["query_filter"]
         assert query_filter is not None
         assert query_filter.must_not is not None
+        assert isinstance(query_filter.must_not, list)
         assert len(query_filter.must_not) == 1
+        assert isinstance(query_filter.must_not[0], FieldCondition)
         assert query_filter.must_not[0].key == "metadata.ingredient_words"
+        assert query_filter.must_not[0].match is not None
+        assert isinstance(query_filter.must_not[0].match, MatchValue)
         assert query_filter.must_not[0].match.value == "honey"
 
 
@@ -272,8 +280,12 @@ class TestBuildQueryFilter:
         handler = self._make_handler()
         result = handler._build_query_filter("iba cocktail recipes")
         assert result is not None
+        assert isinstance(result.must, list)
         assert len(result.must) == 1
+        assert isinstance(result.must[0], FieldCondition)
         assert result.must[0].key == "metadata.is_iba"
+        assert result.must[0].match is not None
+        assert isinstance(result.must[0].match, MatchValue)
         assert result.must[0].match.value is True
 
     def test_non_iba_filter(self):
@@ -281,8 +293,12 @@ class TestBuildQueryFilter:
         handler = self._make_handler()
         result = handler._build_query_filter("non-iba cocktails")
         assert result is not None
+        assert isinstance(result.must, list)
         assert len(result.must) == 1
+        assert isinstance(result.must[0], FieldCondition)
         assert result.must[0].key == "metadata.is_iba"
+        assert result.must[0].match is not None
+        assert isinstance(result.must[0].match, MatchValue)
         assert result.must[0].match.value is False
 
     def test_glassware_filter(self):
@@ -290,8 +306,12 @@ class TestBuildQueryFilter:
         handler = self._make_handler()
         result = handler._build_query_filter("cocktails served in a coupe")
         assert result is not None
+        assert isinstance(result.must, list)
         assert len(result.must) == 1
+        assert isinstance(result.must[0], FieldCondition)
         assert result.must[0].key == "metadata.glassware_values"
+        assert result.must[0].match is not None
+        assert isinstance(result.must[0].match, MatchValue)
         assert result.must[0].match.value == "coupe"
 
     def test_simple_ingredient_count_filter(self):
@@ -299,8 +319,11 @@ class TestBuildQueryFilter:
         handler = self._make_handler()
         result = handler._build_query_filter("simple cocktails")
         assert result is not None
+        assert isinstance(result.must, list)
         assert len(result.must) == 1
+        assert isinstance(result.must[0], FieldCondition)
         assert result.must[0].key == "metadata.ingredient_count"
+        assert result.must[0].range is not None
         assert result.must[0].range.lte == 4
 
     def test_complex_ingredient_count_filter(self):
@@ -308,8 +331,11 @@ class TestBuildQueryFilter:
         handler = self._make_handler()
         result = handler._build_query_filter("complex cocktails")
         assert result is not None
+        assert isinstance(result.must, list)
         assert len(result.must) == 1
+        assert isinstance(result.must[0], FieldCondition)
         assert result.must[0].key == "metadata.ingredient_count"
+        assert result.must[0].range is not None
         assert result.must[0].range.gte == 6
 
     def test_numeric_ingredient_count_filter(self):
@@ -317,8 +343,11 @@ class TestBuildQueryFilter:
         handler = self._make_handler()
         result = handler._build_query_filter("3 ingredient cocktails")
         assert result is not None
+        assert isinstance(result.must, list)
         assert len(result.must) == 1
+        assert isinstance(result.must[0], FieldCondition)
         assert result.must[0].key == "metadata.ingredient_count"
+        assert result.must[0].range is not None
         assert result.must[0].range.gte == 3
         assert result.must[0].range.lte == 3
 
@@ -327,8 +356,11 @@ class TestBuildQueryFilter:
         handler = self._make_handler()
         result = handler._build_query_filter("quick cocktails")
         assert result is not None
+        assert isinstance(result.must, list)
         assert len(result.must) == 1
+        assert isinstance(result.must[0], FieldCondition)
         assert result.must[0].key == "metadata.prep_time_minutes"
+        assert result.must[0].range is not None
         assert result.must[0].range.lte == 5
 
     def test_serves_filter(self):
@@ -336,8 +368,12 @@ class TestBuildQueryFilter:
         handler = self._make_handler()
         result = handler._build_query_filter("cocktail serves 2")
         assert result is not None
+        assert isinstance(result.must, list)
         assert len(result.must) == 1
+        assert isinstance(result.must[0], FieldCondition)
         assert result.must[0].key == "metadata.serves"
+        assert result.must[0].match is not None
+        assert isinstance(result.must[0].match, MatchValue)
         assert result.must[0].match.value == 2
 
     def test_exclusion_filter(self):
@@ -346,8 +382,12 @@ class TestBuildQueryFilter:
         result = handler._build_query_filter("cocktails without rum")
         assert result is not None
         assert result.must_not is not None
+        assert isinstance(result.must_not, list)
         assert len(result.must_not) == 1
+        assert isinstance(result.must_not[0], FieldCondition)
         assert result.must_not[0].key == "metadata.ingredient_words"
+        assert result.must_not[0].match is not None
+        assert isinstance(result.must_not[0].match, MatchValue)
         assert result.must_not[0].match.value == "rum"
 
     def test_combined_filters(self):
@@ -356,13 +396,19 @@ class TestBuildQueryFilter:
         result = handler._build_query_filter("simple iba cocktails without rum")
         assert result is not None
         # Should have IBA + ingredient_count in must
+        assert isinstance(result.must, list)
         assert len(result.must) == 2
-        must_keys = {c.key for c in result.must}
+        assert all(isinstance(c, FieldCondition) for c in result.must)
+        must_keys = {c.key for c in result.must if isinstance(c, FieldCondition)}
         assert "metadata.is_iba" in must_keys
         assert "metadata.ingredient_count" in must_keys
         # Should have rum exclusion in must_not
         assert result.must_not is not None
+        assert isinstance(result.must_not, list)
         assert len(result.must_not) == 1
+        assert isinstance(result.must_not[0], FieldCondition)
+        assert result.must_not[0].match is not None
+        assert isinstance(result.must_not[0].match, MatchValue)
         assert result.must_not[0].match.value == "rum"
 
 

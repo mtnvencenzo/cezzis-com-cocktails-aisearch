@@ -1,6 +1,7 @@
 from typing import Dict, Optional
 
 from pydantic import BaseModel, ConfigDict
+from pydantic.alias_generators import to_camel
 
 
 class HealthCheckRs(BaseModel):
@@ -10,6 +11,8 @@ class HealthCheckRs(BaseModel):
     details: Optional[Dict] = None
 
     model_config = ConfigDict(
+        populate_by_name=True,
+        alias_generator=to_camel,
         json_schema_extra={
             "example": {
                 "status": "healthy",
@@ -19,5 +22,5 @@ class HealthCheckRs(BaseModel):
                     "qdrant_database": "healthy",
                 },
             }
-        }
+        },
     )

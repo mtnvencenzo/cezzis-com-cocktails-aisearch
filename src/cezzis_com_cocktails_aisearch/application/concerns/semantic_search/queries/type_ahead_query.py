@@ -57,7 +57,7 @@ class TypeAheadQueryHandler:
             for c in sorted_cocktails
             if not command.free_text
             or c.title.lower().startswith(command.free_text.lower())
-            or c.descriptiveTitle.lower().startswith(command.free_text.lower())
+            or c.descriptive_title.lower().startswith(command.free_text.lower())
         ]
 
         filtered_cocktails = filtered_start_cocktails
@@ -69,7 +69,7 @@ class TypeAheadQueryHandler:
                 if command.free_text
                 and not filtered_start_cocktails.__contains__(c)
                 and command.free_text.lower()
-                in (c.title.lower() if c.title else "" or c.descriptiveTitle.lower() if c.descriptiveTitle else "")
+                in (c.title.lower() if c.title else "" or c.descriptive_title.lower() if c.descriptive_title else "")
                 and c not in filtered_start_cocktails
             ]
 
