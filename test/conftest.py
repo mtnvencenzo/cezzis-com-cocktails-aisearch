@@ -37,6 +37,7 @@ def create_test_cocktail_model(cocktail_id="test-123", title="Test Cocktail"):
             max_score=1.0,
             avg_score=0.9,
             weighted_score=0.95,
+            reranker_score=0.0,
             hit_count=2,
         ),
     )

@@ -73,19 +73,37 @@ class TestFreeTextQueryHandler:
         mock_repository = AsyncMock()
         mock_cocktail1 = create_test_cocktail_model("1", "Margarita")
         mock_cocktail1.search_statistics = CocktailSearchStatistics(
-            total_score=0.9, max_score=0.9, avg_score=0.9, weighted_score=0.9, hit_count=1, hit_results=[]
+            total_score=0.9,
+            max_score=0.9,
+            avg_score=0.9,
+            weighted_score=0.9,
+            reranker_score=0.0,
+            hit_count=1,
+            hit_results=[],
         )
         mock_cocktail2 = create_test_cocktail_model("2", "Mojito")
         mock_cocktail2.search_statistics = CocktailSearchStatistics(
-            total_score=0.8, max_score=0.8, avg_score=0.8, weighted_score=0.8, hit_count=1, hit_results=[]
+            total_score=0.8,
+            max_score=0.8,
+            avg_score=0.8,
+            weighted_score=0.8,
+            reranker_score=0.0,
+            hit_count=1,
+            hit_results=[],
         )
 
         mock_repository.search_vectors = AsyncMock(return_value=[mock_cocktail1, mock_cocktail2])
         mock_repository.get_all_cocktails = AsyncMock(return_value=[mock_cocktail1, mock_cocktail2])
 
         mock_qdrant_options = MagicMock()
+        mock_reranker = AsyncMock()
+        mock_reranker.rerank = AsyncMock(side_effect=lambda query, cocktails, top_k=10: cocktails)
 
-        handler = FreeTextQueryHandler(cocktail_vector_repository=mock_repository, qdrant_opotions=mock_qdrant_options)
+        handler = FreeTextQueryHandler(
+            cocktail_vector_repository=mock_repository,
+            qdrant_opotions=mock_qdrant_options,
+            reranker_service=mock_reranker,
+        )
 
         query = FreeTextQuery(free_text="tequila")
         result = await handler.handle(query)
@@ -107,17 +125,35 @@ class TestFreeTextQueryHandler:
 
         mock_cocktail1 = create_test_cocktail_model("1", "Low Score")
         mock_cocktail1.search_statistics = CocktailSearchStatistics(
-            total_score=0.5, max_score=0.5, avg_score=0.5, weighted_score=0.5, hit_count=1, hit_results=[]
+            total_score=0.5,
+            max_score=0.5,
+            avg_score=0.5,
+            weighted_score=0.5,
+            reranker_score=0.0,
+            hit_count=1,
+            hit_results=[],
         )
 
         mock_cocktail2 = create_test_cocktail_model("2", "High Score")
         mock_cocktail2.search_statistics = CocktailSearchStatistics(
-            total_score=0.9, max_score=0.9, avg_score=0.9, weighted_score=0.9, hit_count=1, hit_results=[]
+            total_score=0.9,
+            max_score=0.9,
+            avg_score=0.9,
+            weighted_score=0.9,
+            reranker_score=0.0,
+            hit_count=1,
+            hit_results=[],
         )
 
         mock_cocktail3 = create_test_cocktail_model("3", "Medium Score")
         mock_cocktail3.search_statistics = CocktailSearchStatistics(
-            total_score=0.7, max_score=0.7, avg_score=0.7, weighted_score=0.7, hit_count=1, hit_results=[]
+            total_score=0.7,
+            max_score=0.7,
+            avg_score=0.7,
+            weighted_score=0.7,
+            reranker_score=0.0,
+            hit_count=1,
+            hit_results=[],
         )
 
         # Return in unsorted order
@@ -125,8 +161,14 @@ class TestFreeTextQueryHandler:
         mock_repository.get_all_cocktails = AsyncMock(return_value=[mock_cocktail1, mock_cocktail2, mock_cocktail3])
 
         mock_qdrant_options = MagicMock()
+        mock_reranker = AsyncMock()
+        mock_reranker.rerank = AsyncMock(side_effect=lambda query, cocktails, top_k=10: cocktails)
 
-        handler = FreeTextQueryHandler(cocktail_vector_repository=mock_repository, qdrant_opotions=mock_qdrant_options)
+        handler = FreeTextQueryHandler(
+            cocktail_vector_repository=mock_repository,
+            qdrant_opotions=mock_qdrant_options,
+            reranker_service=mock_reranker,
+        )
 
         query = FreeTextQuery(free_text="test query")
         result = await handler.handle(query)
@@ -144,8 +186,14 @@ class TestFreeTextQueryHandler:
         mock_repository.get_all_cocktails = AsyncMock(return_value=[])
 
         mock_qdrant_options = MagicMock()
+        mock_reranker = AsyncMock()
+        mock_reranker.rerank = AsyncMock(side_effect=lambda query, cocktails, top_k=10: cocktails)
 
-        handler = FreeTextQueryHandler(cocktail_vector_repository=mock_repository, qdrant_opotions=mock_qdrant_options)
+        handler = FreeTextQueryHandler(
+            cocktail_vector_repository=mock_repository,
+            qdrant_opotions=mock_qdrant_options,
+            reranker_service=mock_reranker,
+        )
 
         query = FreeTextQuery(free_text="nonexistent")
         result = await handler.handle(query)
@@ -161,8 +209,14 @@ class TestFreeTextQueryHandler:
         mock_repository.get_all_cocktails = AsyncMock(return_value=[mock_cocktail2, mock_cocktail1])
 
         mock_qdrant_options = MagicMock()
+        mock_reranker = AsyncMock()
+        mock_reranker.rerank = AsyncMock(side_effect=lambda query, cocktails, top_k=10: cocktails)
 
-        handler = FreeTextQueryHandler(cocktail_vector_repository=mock_repository, qdrant_opotions=mock_qdrant_options)
+        handler = FreeTextQueryHandler(
+            cocktail_vector_repository=mock_repository,
+            qdrant_opotions=mock_qdrant_options,
+            reranker_service=mock_reranker,
+        )
 
         query = FreeTextQuery(free_text=None, skip=0, take=10)
         result = await handler.handle(query)
@@ -184,8 +238,14 @@ class TestFreeTextQueryHandler:
         mock_repository.get_all_cocktails = AsyncMock(return_value=[mock_cocktail])
 
         mock_qdrant_options = MagicMock()
+        mock_reranker = AsyncMock()
+        mock_reranker.rerank = AsyncMock(side_effect=lambda query, cocktails, top_k=10: cocktails)
 
-        handler = FreeTextQueryHandler(cocktail_vector_repository=mock_repository, qdrant_opotions=mock_qdrant_options)
+        handler = FreeTextQueryHandler(
+            cocktail_vector_repository=mock_repository,
+            qdrant_opotions=mock_qdrant_options,
+            reranker_service=mock_reranker,
+        )
 
         query = FreeTextQuery(free_text="Margarita")
         result = await handler.handle(query)
@@ -203,8 +263,14 @@ class TestFreeTextQueryHandler:
         mock_repository.get_all_cocktails = AsyncMock(return_value=[mock_cocktail1, mock_cocktail2])
 
         mock_qdrant_options = MagicMock()
+        mock_reranker = AsyncMock()
+        mock_reranker.rerank = AsyncMock(side_effect=lambda query, cocktails, top_k=10: cocktails)
 
-        handler = FreeTextQueryHandler(cocktail_vector_repository=mock_repository, qdrant_opotions=mock_qdrant_options)
+        handler = FreeTextQueryHandler(
+            cocktail_vector_repository=mock_repository,
+            qdrant_opotions=mock_qdrant_options,
+            reranker_service=mock_reranker,
+        )
 
         query = FreeTextQuery(free_text="rum")
         result = await handler.handle(query)
@@ -222,8 +288,14 @@ class TestFreeTextQueryHandler:
         mock_repository.get_all_cocktails = AsyncMock(return_value=[])
 
         mock_qdrant_options = MagicMock()
+        mock_reranker = AsyncMock()
+        mock_reranker.rerank = AsyncMock(side_effect=lambda query, cocktails, top_k=10: cocktails)
 
-        handler = FreeTextQueryHandler(cocktail_vector_repository=mock_repository, qdrant_opotions=mock_qdrant_options)
+        handler = FreeTextQueryHandler(
+            cocktail_vector_repository=mock_repository,
+            qdrant_opotions=mock_qdrant_options,
+            reranker_service=mock_reranker,
+        )
 
         query = FreeTextQuery(free_text="iba cocktail recipes")
         await handler.handle(query)
@@ -247,8 +319,14 @@ class TestFreeTextQueryHandler:
         mock_repository.get_all_cocktails = AsyncMock(return_value=[])
 
         mock_qdrant_options = MagicMock()
+        mock_reranker = AsyncMock()
+        mock_reranker.rerank = AsyncMock(side_effect=lambda query, cocktails, top_k=10: cocktails)
 
-        handler = FreeTextQueryHandler(cocktail_vector_repository=mock_repository, qdrant_opotions=mock_qdrant_options)
+        handler = FreeTextQueryHandler(
+            cocktail_vector_repository=mock_repository,
+            qdrant_opotions=mock_qdrant_options,
+            reranker_service=mock_reranker,
+        )
 
         query = FreeTextQuery(free_text="cocktails without honey")
         await handler.handle(query)
@@ -272,7 +350,13 @@ class TestBuildQueryFilter:
     def _make_handler(self):
         mock_repository = AsyncMock()
         mock_qdrant_options = MagicMock()
-        return FreeTextQueryHandler(cocktail_vector_repository=mock_repository, qdrant_opotions=mock_qdrant_options)
+        mock_reranker = AsyncMock()
+        mock_reranker.rerank = AsyncMock(side_effect=lambda query, cocktails, top_k=10: cocktails)
+        return FreeTextQueryHandler(
+            cocktail_vector_repository=mock_repository,
+            qdrant_opotions=mock_qdrant_options,
+            reranker_service=mock_reranker,
+        )
 
     def test_returns_none_for_plain_query(self):
         """Test that a plain query without structured elements returns None."""
@@ -415,6 +499,81 @@ class TestBuildQueryFilter:
         assert isinstance(result.must_not[0].match, MatchValue)
         assert result.must_not[0].match.value == "honey"
 
+    def test_inclusion_filter_with_honey(self):
+        """Test that 'with honey' triggers ingredient inclusion filter."""
+        handler = self._make_handler()
+        result = handler._build_query_filter("cocktails with honey")
+        assert result is not None
+        assert isinstance(result.must, list)
+        inclusion_conditions = [
+            c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.ingredient_words"
+        ]
+        assert len(inclusion_conditions) == 1
+        assert isinstance(inclusion_conditions[0].match, MatchValue)
+        assert inclusion_conditions[0].match.value == "honey"
+
+    def test_inclusion_filter_using_pattern(self):
+        """Test that 'using lime' triggers ingredient inclusion filter."""
+        handler = self._make_handler()
+        result = handler._build_query_filter("cocktails using lime")
+        assert result is not None
+        assert isinstance(result.must, list)
+        inclusion_conditions = [
+            c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.ingredient_words"
+        ]
+        assert len(inclusion_conditions) == 1
+        assert isinstance(inclusion_conditions[0].match, MatchValue)
+        assert inclusion_conditions[0].match.value == "lime"
+
+    def test_inclusion_filter_made_with_pattern(self):
+        """Test that 'made with bourbon' triggers ingredient inclusion filter."""
+        handler = self._make_handler()
+        result = handler._build_query_filter("cocktails made with bourbon")
+        assert result is not None
+        assert isinstance(result.must, list)
+        inclusion_conditions = [
+            c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.ingredient_words"
+        ]
+        assert len(inclusion_conditions) >= 1
+        inclusion_values = [c.match.value for c in inclusion_conditions if isinstance(c.match, MatchValue)]
+        assert "bourbon" in inclusion_values
+
+    def test_inclusion_does_not_trigger_on_without(self):
+        """Test that 'without honey' does NOT trigger ingredient inclusion."""
+        handler = self._make_handler()
+        result = handler._build_query_filter("cocktails without honey")
+        assert result is not None
+        # Must should not have ingredient_words inclusion
+        if result.must:
+            inclusion_conditions = [
+                c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.ingredient_words"
+            ]
+            assert len(inclusion_conditions) == 0
+        # Must_not should have the exclusion
+        assert result.must_not is not None
+        assert isinstance(result.must_not, list)
+        assert len(result.must_not) == 1
+
+    def test_inclusion_and_exclusion_combined(self):
+        """Test that 'with lime without honey' includes lime and excludes honey."""
+        handler = self._make_handler()
+        result = handler._build_query_filter("cocktails with lime without honey")
+        assert result is not None
+        assert isinstance(result.must, list)
+        inclusion_conditions = [
+            c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.ingredient_words"
+        ]
+        assert len(inclusion_conditions) == 1
+        assert isinstance(inclusion_conditions[0].match, MatchValue)
+        assert inclusion_conditions[0].match.value == "lime"
+        # Exclusion
+        assert result.must_not is not None
+        assert isinstance(result.must_not, list)
+        assert len(result.must_not) == 1
+        assert isinstance(result.must_not[0], FieldCondition)
+        assert isinstance(result.must_not[0].match, MatchValue)
+        assert result.must_not[0].match.value == "honey"
+
 
 class TestExtractExclusionTerms:
     """Test cases for _extract_exclusion_terms."""
@@ -422,7 +581,13 @@ class TestExtractExclusionTerms:
     def _make_handler(self):
         mock_repository = AsyncMock()
         mock_qdrant_options = MagicMock()
-        return FreeTextQueryHandler(cocktail_vector_repository=mock_repository, qdrant_opotions=mock_qdrant_options)
+        mock_reranker = AsyncMock()
+        mock_reranker.rerank = AsyncMock(side_effect=lambda query, cocktails, top_k=10: cocktails)
+        return FreeTextQueryHandler(
+            cocktail_vector_repository=mock_repository,
+            qdrant_opotions=mock_qdrant_options,
+            reranker_service=mock_reranker,
+        )
 
     def test_without_pattern(self):
         handler = self._make_handler()
@@ -479,6 +644,114 @@ class TestExtractExclusionTerms:
         # Should only capture first 3 words of the phrase
         assert len(terms) == 3
 
+    def test_not_containing_pattern(self):
+        handler = self._make_handler()
+        terms = handler._extract_exclusion_terms("cocktails not containing honey")
+        assert terms == ["honey"]
+
+    def test_not_featuring_pattern(self):
+        handler = self._make_handler()
+        terms = handler._extract_exclusion_terms("cocktails not featuring rum")
+        assert terms == ["rum"]
+
+    def test_that_exclude_pattern(self):
+        handler = self._make_handler()
+        terms = handler._extract_exclusion_terms("cocktails that exclude lime")
+        assert terms == ["lime"]
+
+
+class TestExtractInclusionTerms:
+    """Test cases for _extract_inclusion_terms."""
+
+    def _make_handler(self):
+        mock_repository = AsyncMock()
+        mock_qdrant_options = MagicMock()
+        mock_reranker = AsyncMock()
+        mock_reranker.rerank = AsyncMock(side_effect=lambda query, cocktails, top_k=10: cocktails)
+        return FreeTextQueryHandler(
+            cocktail_vector_repository=mock_repository,
+            qdrant_opotions=mock_qdrant_options,
+            reranker_service=mock_reranker,
+        )
+
+    def test_with_pattern(self):
+        handler = self._make_handler()
+        terms = handler._extract_inclusion_terms("cocktails with honey")
+        assert terms == ["honey"]
+
+    def test_using_pattern(self):
+        handler = self._make_handler()
+        terms = handler._extract_inclusion_terms("cocktails using lime")
+        assert terms == ["lime"]
+
+    def test_containing_pattern(self):
+        handler = self._make_handler()
+        terms = handler._extract_inclusion_terms("cocktails containing ginger")
+        assert terms == ["ginger"]
+
+    def test_contains_pattern(self):
+        handler = self._make_handler()
+        terms = handler._extract_inclusion_terms("cocktails contains honey")
+        assert terms == ["honey"]
+
+    def test_made_with_pattern(self):
+        handler = self._make_handler()
+        terms = handler._extract_inclusion_terms("cocktails made with bourbon")
+        assert terms == ["bourbon"]
+
+    def test_no_inclusion_in_plain_query(self):
+        handler = self._make_handler()
+        terms = handler._extract_inclusion_terms("tequila cocktails")
+        assert terms == []
+
+    def test_without_does_not_trigger_inclusion(self):
+        """Test that 'without honey' does NOT trigger inclusion for honey."""
+        handler = self._make_handler()
+        terms = handler._extract_inclusion_terms("cocktails without honey")
+        assert "honey" not in terms
+
+    def test_multi_word_inclusion(self):
+        """Test that multi-word ingredients are extracted."""
+        handler = self._make_handler()
+        terms = handler._extract_inclusion_terms("cocktails with lime juice")
+        assert "lime" in terms
+        assert "juice" in terms
+
+    def test_inclusion_stops_at_stop_word(self):
+        """Test that extraction stops at stop words."""
+        handler = self._make_handler()
+        terms = handler._extract_inclusion_terms("cocktails with honey and lime")
+        assert "honey" in terms
+        # 'and' is a stop word, so 'lime' is not part of the honey inclusion
+        assert "lime" not in terms
+
+    def test_inclusion_excludes_already_excluded_terms(self):
+        """Test that terms in exclusion are not also included."""
+        handler = self._make_handler()
+        terms = handler._extract_inclusion_terms("cocktails with lime without lime")
+        assert "lime" not in terms
+
+    def test_multi_word_inclusion_max_three_words(self):
+        """Test that multi-word extraction is capped at 3 words."""
+        handler = self._make_handler()
+        terms = handler._extract_inclusion_terms("cocktails with fresh squeezed blood orange juice")
+        assert len(terms) == 3
+
+    def test_featuring_pattern(self):
+        handler = self._make_handler()
+        terms = handler._extract_inclusion_terms("cocktails featuring honey")
+        assert terms == ["honey"]
+
+    def test_have_pattern(self):
+        handler = self._make_handler()
+        terms = handler._extract_inclusion_terms("cocktails that have ginger")
+        assert terms == ["ginger"]
+
+    def test_that_include_pattern(self):
+        handler = self._make_handler()
+        terms = handler._extract_inclusion_terms("cocktails that include lime")
+        assert terms == ["lime"]
+
 
 class TestFuzzyNameMatch:
     """Test cases for fuzzy name matching."""
@@ -486,7 +759,13 @@ class TestFuzzyNameMatch:
     def _make_handler(self):
         mock_repository = AsyncMock()
         mock_qdrant_options = MagicMock()
-        return FreeTextQueryHandler(cocktail_vector_repository=mock_repository, qdrant_opotions=mock_qdrant_options)
+        mock_reranker = AsyncMock()
+        mock_reranker.rerank = AsyncMock(side_effect=lambda query, cocktails, top_k=10: cocktails)
+        return FreeTextQueryHandler(
+            cocktail_vector_repository=mock_repository,
+            qdrant_opotions=mock_qdrant_options,
+            reranker_service=mock_reranker,
+        )
 
     def test_fuzzy_match_misspelled_margarita(self):
         """Test that 'Margerita' fuzzy-matches 'Margarita'."""
@@ -552,16 +831,25 @@ class TestKeywordMetadataFilters:
     def _make_handler(self):
         mock_repository = AsyncMock()
         mock_qdrant_options = MagicMock()
-        return FreeTextQueryHandler(cocktail_vector_repository=mock_repository, qdrant_opotions=mock_qdrant_options)
+        mock_reranker = AsyncMock()
+        mock_reranker.rerank = AsyncMock(side_effect=lambda query, cocktails, top_k=10: cocktails)
+        return FreeTextQueryHandler(
+            cocktail_vector_repository=mock_repository,
+            qdrant_opotions=mock_qdrant_options,
+            reranker_service=mock_reranker,
+        )
 
     def test_base_spirit_gin_filter(self):
         """Test that 'gin' triggers base_spirit filter."""
         handler = self._make_handler()
         result = handler._build_query_filter("gin cocktails")
         assert result is not None
+        assert isinstance(result.must, list)
         must_keys = {c.key for c in result.must if isinstance(c, FieldCondition)}
         assert "metadata.keywords_base_spirit" in must_keys
-        spirit_condition = next(c for c in result.must if c.key == "metadata.keywords_base_spirit")
+        spirit_condition = next(
+            c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_base_spirit"
+        )
         assert isinstance(spirit_condition.match, MatchValue)
         assert spirit_condition.match.value == "gin"
 
@@ -570,7 +858,11 @@ class TestKeywordMetadataFilters:
         handler = self._make_handler()
         result = handler._build_query_filter("bourbon cocktails")
         assert result is not None
-        spirit_condition = next(c for c in result.must if c.key == "metadata.keywords_base_spirit")
+        assert isinstance(result.must, list)
+        spirit_condition = next(
+            c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_base_spirit"
+        )
+        assert isinstance(spirit_condition.match, MatchValue)
         assert spirit_condition.match.value == "bourbon"
 
     def test_flavor_profile_filter(self):
@@ -578,6 +870,7 @@ class TestKeywordMetadataFilters:
         handler = self._make_handler()
         result = handler._build_query_filter("bitter cocktails")
         assert result is not None
+        assert isinstance(result.must, list)
         must_keys = {c.key for c in result.must if isinstance(c, FieldCondition)}
         assert "metadata.keywords_flavor_profile" in must_keys
 
@@ -586,6 +879,7 @@ class TestKeywordMetadataFilters:
         handler = self._make_handler()
         result = handler._build_query_filter("tiki cocktails")
         assert result is not None
+        assert isinstance(result.must, list)
         must_keys = {c.key for c in result.must if isinstance(c, FieldCondition)}
         assert "metadata.keywords_cocktail_family" in must_keys
 
@@ -594,7 +888,10 @@ class TestKeywordMetadataFilters:
         handler = self._make_handler()
         result = handler._build_query_filter("shaken cocktails")
         assert result is not None
-        technique_condition = next(c for c in result.must if c.key == "metadata.keywords_technique")
+        assert isinstance(result.must, list)
+        technique_condition = next(
+            c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_technique"
+        )
         assert isinstance(technique_condition.match, MatchValue)
         assert technique_condition.match.value == "shaken"
 
@@ -603,7 +900,11 @@ class TestKeywordMetadataFilters:
         handler = self._make_handler()
         result = handler._build_query_filter("stirred drinks")
         assert result is not None
-        technique_condition = next(c for c in result.must if c.key == "metadata.keywords_technique")
+        assert isinstance(result.must, list)
+        technique_condition = next(
+            c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_technique"
+        )
+        assert isinstance(technique_condition.match, MatchValue)
         assert technique_condition.match.value == "stirred"
 
     def test_strength_filter(self):
@@ -611,7 +912,10 @@ class TestKeywordMetadataFilters:
         handler = self._make_handler()
         result = handler._build_query_filter("strong cocktails")
         assert result is not None
-        strength_condition = next(c for c in result.must if c.key == "metadata.keywords_strength")
+        assert isinstance(result.must, list)
+        strength_condition = next(
+            c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_strength"
+        )
         assert isinstance(strength_condition.match, MatchValue)
         assert strength_condition.match.value == "strong"
 
@@ -620,7 +924,10 @@ class TestKeywordMetadataFilters:
         handler = self._make_handler()
         result = handler._build_query_filter("frozen cocktails")
         assert result is not None
-        temp_condition = next(c for c in result.must if c.key == "metadata.keywords_temperature")
+        assert isinstance(result.must, list)
+        temp_condition = next(
+            c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_temperature"
+        )
         assert isinstance(temp_condition.match, MatchValue)
         assert temp_condition.match.value == "frozen"
 
@@ -629,7 +936,10 @@ class TestKeywordMetadataFilters:
         handler = self._make_handler()
         result = handler._build_query_filter("summer cocktails")
         assert result is not None
-        season_condition = next(c for c in result.must if c.key == "metadata.keywords_season")
+        assert isinstance(result.must, list)
+        season_condition = next(
+            c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_season"
+        )
         assert isinstance(season_condition.match, MatchAny)
         assert "summer" in season_condition.match.any
 
@@ -638,7 +948,10 @@ class TestKeywordMetadataFilters:
         handler = self._make_handler()
         result = handler._build_query_filter("autumn cocktails")
         assert result is not None
-        season_condition = next(c for c in result.must if c.key == "metadata.keywords_season")
+        assert isinstance(result.must, list)
+        season_condition = next(
+            c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_season"
+        )
         assert isinstance(season_condition.match, MatchAny)
         assert "fall" in season_condition.match.any
 
@@ -647,7 +960,10 @@ class TestKeywordMetadataFilters:
         handler = self._make_handler()
         result = handler._build_query_filter("brunch cocktails")
         assert result is not None
-        occasion_condition = next(c for c in result.must if c.key == "metadata.keywords_occasion")
+        assert isinstance(result.must, list)
+        occasion_condition = next(
+            c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_occasion"
+        )
         assert isinstance(occasion_condition.match, MatchValue)
         assert occasion_condition.match.value == "brunch"
 
@@ -656,7 +972,10 @@ class TestKeywordMetadataFilters:
         handler = self._make_handler()
         result = handler._build_query_filter("refreshing cocktails")
         assert result is not None
-        mood_condition = next(c for c in result.must if c.key == "metadata.keywords_mood")
+        assert isinstance(result.must, list)
+        mood_condition = next(
+            c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_mood"
+        )
         assert isinstance(mood_condition.match, MatchValue)
         assert mood_condition.match.value == "refreshing"
 
@@ -665,6 +984,7 @@ class TestKeywordMetadataFilters:
         handler = self._make_handler()
         result = handler._build_query_filter("refreshing gin summer cocktails")
         assert result is not None
+        assert isinstance(result.must, list)
         must_keys = {c.key for c in result.must if isinstance(c, FieldCondition)}
         assert "metadata.keywords_base_spirit" in must_keys
         assert "metadata.keywords_season" in must_keys

@@ -191,6 +191,7 @@ class CocktailVectorRepository(ICocktailVectorRepository):
                             max_score=score,
                             avg_score=score,
                             weighted_score=score,
+                            reranker_score=0.0,
                             hit_count=1,
                             hit_results=[CocktailVectorSearchResult(score=score)],
                         )
@@ -206,6 +207,7 @@ class CocktailVectorRepository(ICocktailVectorRepository):
                                         max_score=0.0,
                                         avg_score=0.0,
                                         weighted_score=0.0,
+                                        reranker_score=0.0,
                                         hit_count=0,
                                         hit_results=[],
                                     )

@@ -48,7 +48,13 @@ class CocktailSearchModel(BaseModel):
     )
     search_statistics: CocktailSearchStatistics = Field(
         default_factory=lambda: CocktailSearchStatistics(
-            total_score=0.0, max_score=0.0, avg_score=0.0, weighted_score=0.0, hit_count=0, hit_results=[]
+            total_score=0.0,
+            max_score=0.0,
+            avg_score=0.0,
+            weighted_score=0.0,
+            reranker_score=0.0,
+            hit_count=0,
+            hit_results=[],
         ),
         description="Search statistics for the cocktail",
     )

@@ -15,6 +15,7 @@ from cezzis_com_cocktails_aisearch.domain.config.qdrant_options import QdrantOpt
 from cezzis_com_cocktails_aisearch.infrastructure.repositories.icocktail_vector_repository import (
     ICocktailVectorRepository,
 )
+from cezzis_com_cocktails_aisearch.infrastructure.services.ireranker_service import IRerankerService
 
 
 class FreeTextQuery(GenericQuery[list[tuple[str, float]]]):
@@ -51,9 +52,25 @@ class FreeTextQueryHandler:
     # Patterns that indicate ingredient exclusion
     _EXCLUSION_PATTERNS: list[str] = [
         "without ",
+        "not containing ",
+        "not featuring ",
+        "that exclude ",
         "no ",
         "excluding ",
         "exclude ",
+    ]
+
+    # Patterns that indicate ingredient inclusion
+    _INCLUSION_PATTERNS: list[str] = [
+        "made with ",
+        "that include ",
+        "that have ",
+        "containing ",
+        "contains ",
+        "featuring ",
+        "using ",
+        "have ",
+        "with ",
     ]
 
     # Fuzzy matching threshold (0-100) for cocktail name matching
@@ -223,9 +240,11 @@ class FreeTextQueryHandler:
         self,
         cocktail_vector_repository: ICocktailVectorRepository,
         qdrant_opotions: QdrantOptions,
+        reranker_service: IRerankerService,
     ):
         self.cocktail_vector_repository = cocktail_vector_repository
         self.qdrant_options = qdrant_opotions
+        self.reranker_service = reranker_service
         self.logger = logging.getLogger("free_text_query_handler")
 
     async def handle(self, command: FreeTextQuery) -> list[CocktailSearchModel]:
@@ -261,12 +280,20 @@ class FreeTextQueryHandler:
             reverse=True,
         )
 
+        skip = command.skip or 0
+        take = command.take or 10
+
+        # Cross-encoder reranking: refine relevance ordering using TEI /rerank
+        sorted_cocktails = await self.reranker_service.rerank(
+            query=command.free_text,
+            cocktails=sorted_cocktails,
+            top_k=skip + take,
+        )
+
         # Apply rating-based sort override for rating queries
         if any(term in search_text for term in ["top rated", "best rated", "highest rated", "popular"]):
             sorted_cocktails = sorted(sorted_cocktails, key=lambda c: c.rating, reverse=True)
 
-        skip = command.skip or 0
-        take = command.take or 10
         return sorted_cocktails[skip : skip + take]
 
     async def _handle_browse(self, command: FreeTextQuery) -> list[CocktailSearchModel]:
@@ -507,6 +534,11 @@ class FreeTextQueryHandler:
         for term in excluded_terms:
             must_not_conditions.append(FieldCondition(key="metadata.ingredient_words", match=MatchValue(value=term)))
 
+        # Ingredient inclusion (e.g., "with honey", "using lime", "made with bourbon")
+        included_terms = self._extract_inclusion_terms(search_text)
+        for term in included_terms:
+            must_conditions.append(FieldCondition(key="metadata.ingredient_words", match=MatchValue(value=term)))
+
         if must_conditions or must_not_conditions:
             return Filter(
                 must=must_conditions if must_conditions else None,
@@ -565,6 +597,68 @@ class FreeTextQueryHandler:
                 # Add each word individually for matching against ingredient_words
                 for word in phrase_words:
                     if word not in terms:
+                        terms.append(word)
+
+                idx = search_text.find(pattern, idx + len(pattern))
+        return terms
+
+    def _extract_inclusion_terms(self, search_text: str) -> list[str]:
+        """
+        Extract ingredient terms that should be included in results.
+        Handles patterns like "with honey", "using lime juice", "made with bourbon".
+        Each word of a multi-word phrase is added individually to match against
+        the ingredient_words field which stores split words.
+
+        Skips terms that are also detected as keyword metadata filters (base spirits,
+        glassware, etc.) to avoid double-filtering.
+        """
+        # Stop words that signal the end of an inclusion phrase
+        _STOP_WORDS = {
+            "and",
+            "or",
+            "but",
+            "without",
+            "no",
+            "in",
+            "on",
+            "the",
+            "a",
+            "an",
+            "served",
+            "cocktail",
+            "cocktails",
+            "drink",
+            "drinks",
+            "that",
+            "which",
+            "for",
+            "from",
+        }
+
+        terms: list[str] = []
+        excluded_terms = set(self._extract_exclusion_terms(search_text))
+
+        for pattern in self._INCLUSION_PATTERNS:
+            idx = search_text.find(pattern)
+            while idx >= 0:
+                after = search_text[idx + len(pattern) :].split()
+                # Collect words until we hit a stop word, another pattern, or punctuation
+                phrase_words: list[str] = []
+                for word in after:
+                    cleaned = word.strip(",.!?").lower()
+                    if cleaned in _STOP_WORDS or len(cleaned) < 2:
+                        break
+                    # Check if this word starts an exclusion pattern
+                    if any(cleaned == exc_pattern.strip() for exc_pattern in self._EXCLUSION_PATTERNS):
+                        break
+                    phrase_words.append(cleaned)
+                    # Limit to 3-word phrases to avoid runaway matching
+                    if len(phrase_words) >= 3:
+                        break
+
+                # Add each word individually for matching against ingredient_words
+                for word in phrase_words:
+                    if word not in terms and word not in excluded_terms:
                         terms.append(word)
 
                 idx = search_text.find(pattern, idx + len(pattern))

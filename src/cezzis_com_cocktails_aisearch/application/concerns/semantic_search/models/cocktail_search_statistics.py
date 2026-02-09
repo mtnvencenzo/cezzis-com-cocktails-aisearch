@@ -20,6 +20,7 @@ class CocktailSearchStatistics(BaseModel):
     weighted_score: float = Field(
         0.0, description="Weighted score combining avg with hit count boost", examples=[0.6260669]
     )
+    reranker_score: float = Field(0.0, description="Cross-encoder reranker relevance score", examples=[0.892])
     hit_count: int = Field(0, description="Number of matching chunks", examples=[3])
     hit_results: list[CocktailVectorSearchResult] = Field(
         [],
