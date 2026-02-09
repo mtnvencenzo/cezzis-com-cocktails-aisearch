@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import math
+from collections import OrderedDict
 
 from injector import inject
 from langchain_huggingface import HuggingFaceEndpointEmbeddings
@@ -51,6 +53,8 @@ class CocktailVectorRepository(ICocktailVectorRepository):
         self.logger = logging.getLogger("cocktail_vector_repository")
         self._cocktails_cache: list[CocktailSearchModel] | None = None
         self._cache_lock = asyncio.Lock()
+        self._embedding_cache: OrderedDict[str, list[float]] = OrderedDict()
+        self._embedding_cache_max_size: int = 1024
 
     async def delete_vectors(self, cocktail_id: str) -> None:
         self.logger.info(
@@ -132,8 +136,26 @@ class CocktailVectorRepository(ICocktailVectorRepository):
         if len(result) == 0:
             raise ValueError("No embedding results returned from vector store")
 
+    async def _get_cached_embedding(self, text: str) -> list[float]:
+        """Get embedding from cache or generate and cache it."""
+        cache_key = text.strip().lower()
+        if cache_key in self._embedding_cache:
+            # Move to end (most recently used)
+            self._embedding_cache.move_to_end(cache_key)
+            self.logger.debug(f"Embedding cache hit for: {cache_key[:50]}")
+            return self._embedding_cache[cache_key]
+
+        embedding = await self._embeddings.aembed_query(text)
+
+        # Evict oldest entry if cache is full
+        if len(self._embedding_cache) >= self._embedding_cache_max_size:
+            self._embedding_cache.popitem(last=False)
+
+        self._embedding_cache[cache_key] = embedding
+        return embedding
+
     async def search_vectors(self, free_text: str, query_filter: Filter | None = None) -> list[CocktailSearchModel]:
-        query_vector = await self._embeddings.aembed_query(free_text or "")
+        query_vector = await self._get_cached_embedding(free_text or "")
 
         search_results = self.qdrant_client.query_points(
             collection_name=self.qdrant_options.collection_name,
@@ -199,10 +221,14 @@ class CocktailVectorRepository(ICocktailVectorRepository):
             if cocktail.search_statistics and cocktail.search_statistics.hit_count > 0:
                 stats = cocktail.search_statistics
                 stats.avg_score = stats.total_score / stats.hit_count
-                # Weighted score: average score boosted by hit count (capped at 5 hits for diminishing returns)
-                # This rewards cocktails that match multiple chunks while still prioritizing high-scoring matches
-                hit_boost = 1.0 + (0.1 * min(stats.hit_count - 1, 4))  # Up to 40% boost for 5+ hits
-                stats.weighted_score = stats.avg_score * hit_boost
+                # Improved weighted scoring formula:
+                # - max_score (60%): strongest single-chunk match is the primary signal
+                # - avg_score (30%): rewards consistent relevance across chunks
+                # - log(hit_count) (10%): diminishing returns for breadth of matching
+                # This prevents a cocktail with 5 low-scoring chunk hits (e.g., 0.3 each)
+                # from outranking one with 2 high-scoring hits (e.g., 0.8 each)
+                hit_breadth = math.log(stats.hit_count + 1)  # log(2)=0.69, log(6)=1.79
+                stats.weighted_score = stats.max_score * 0.6 + stats.avg_score * 0.3 + hit_breadth * 0.1
 
         return cocktails
 

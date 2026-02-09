@@ -4,7 +4,8 @@ from typing import Optional
 
 from injector import inject
 from mediatr import GenericQuery, Mediator
-from qdrant_client.http.models import Condition, FieldCondition, Filter, MatchValue, Range
+from qdrant_client.http.models import Condition, FieldCondition, Filter, MatchAny, MatchValue, Range
+from rapidfuzz import fuzz
 
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_data_include_model import (
     CocktailSearchDataIncludeModel,
@@ -55,6 +56,9 @@ class FreeTextQueryHandler:
         "exclude ",
     ]
 
+    # Fuzzy matching threshold (0-100) for cocktail name matching
+    _FUZZY_MATCH_THRESHOLD: int = 82
+
     # Glassware keyword to Qdrant payload value mapping
     _GLASSWARE_MAPPING: dict[str, str] = {
         "coupe": "coupe",
@@ -76,6 +80,143 @@ class FreeTextQueryHandler:
         "shot glass": "shotGlass",
         "pint glass": "pintGlass",
     }
+
+    # Base spirit keywords to Qdrant metadata values
+    _BASE_SPIRIT_MAPPING: dict[str, str] = {
+        "gin": "gin",
+        "rum": "rum",
+        "vodka": "vodka",
+        "tequila": "tequila",
+        "mezcal": "mezcal",
+        "whiskey": "whiskey",
+        "whisky": "whiskey",
+        "bourbon": "bourbon",
+        "rye": "rye",
+        "scotch": "scotch",
+        "brandy": "brandy",
+        "cognac": "cognac",
+        "pisco": "pisco",
+        "absinthe": "absinthe",
+        "cachaça": "cachaça",
+        "cachaca": "cachaça",
+    }
+
+    # Flavor profile keywords
+    _FLAVOR_PROFILE_KEYWORDS: list[str] = [
+        "bitter",
+        "sweet",
+        "sour",
+        "citrus",
+        "fruity",
+        "herbal",
+        "spicy",
+        "smoky",
+        "floral",
+        "savory",
+        "tropical",
+        "dry",
+        "creamy",
+        "nutty",
+        "tart",
+        "minty",
+        "boozy",
+    ]
+
+    # Cocktail family keywords
+    _COCKTAIL_FAMILY_KEYWORDS: list[str] = [
+        "sour",
+        "fizz",
+        "tiki",
+        "negroni",
+        "martini",
+        "highball",
+        "julep",
+        "smash",
+        "flip",
+        "punch",
+        "spritz",
+        "cobbler",
+        "daisy",
+        "mule",
+        "toddy",
+        "collins",
+        "swizzle",
+    ]
+
+    # Technique keywords
+    _TECHNIQUE_MAPPING: dict[str, str] = {
+        "shaken": "shaken",
+        "shake": "shaken",
+        "stirred": "stirred",
+        "stir": "stirred",
+        "built": "built",
+        "build": "built",
+        "muddled": "muddled",
+        "muddle": "muddled",
+        "blended": "blended",
+        "blend": "blended",
+        "layered": "layered",
+        "layer": "layered",
+    }
+
+    # Strength keywords
+    _STRENGTH_KEYWORDS: dict[str, str] = {
+        "light": "light",
+        "mild": "light",
+        "low abv": "light",
+        "low-abv": "light",
+        "sessionable": "light",
+        "medium": "medium",
+        "strong": "strong",
+        "boozy": "strong",
+        "stiff": "strong",
+    }
+
+    # Temperature keywords
+    _TEMPERATURE_KEYWORDS: dict[str, str] = {
+        "cold": "cold",
+        "chilled": "cold",
+        "frozen": "frozen",
+        "blended": "frozen",
+        "warm": "warm",
+        "hot": "warm",
+    }
+
+    # Season keywords
+    _SEASON_KEYWORDS: list[str] = [
+        "summer",
+        "winter",
+        "spring",
+        "fall",
+        "autumn",
+        "all-season",
+    ]
+
+    # Occasion keywords
+    _OCCASION_KEYWORDS: list[str] = [
+        "aperitif",
+        "digestif",
+        "party",
+        "brunch",
+        "dinner",
+        "date night",
+        "celebration",
+        "nightcap",
+        "after dinner",
+    ]
+
+    # Mood keywords
+    _MOOD_KEYWORDS: list[str] = [
+        "refreshing",
+        "sophisticated",
+        "fun",
+        "relaxing",
+        "cozy",
+        "elegant",
+        "festive",
+        "adventurous",
+        "romantic",
+    ]
 
     @inject
     def __init__(
@@ -153,6 +294,7 @@ class FreeTextQueryHandler:
         Returns cocktails where:
         1. Title exactly matches the search text (prioritized first)
         2. Title contains the search text as a substring
+        3. Title fuzzy-matches the search text (handles typos like "Margerita", "Mohito")
 
         This ensures "Mai Tai" returns both "Mai Tai" and "Bitter Mai Tai".
         """
@@ -181,7 +323,39 @@ class FreeTextQueryHandler:
             partial_matches_sorted = sorted(partial_matches, key=lambda c: c.title)
             return exact_matches + partial_matches_sorted
 
+        # Fuzzy matching fallback for typo tolerance (e.g., "Margerita" → "Margarita")
+        fuzzy_matches = self._find_fuzzy_name_match(search_normalized, all_cocktails)
+        if fuzzy_matches:
+            return fuzzy_matches
+
         return None
+
+    def _find_fuzzy_name_match(
+        self, search_text: str, all_cocktails: list[CocktailSearchModel]
+    ) -> list[CocktailSearchModel] | None:
+        """
+        Find cocktails whose names fuzzy-match the search text using rapidfuzz.
+        Handles common misspellings like "Margerita", "Mohito", "Daiquri".
+        Returns matches sorted by fuzzy score descending, or None if no good matches.
+        """
+        scored_matches: list[tuple[CocktailSearchModel, float]] = []
+
+        for cocktail in all_cocktails:
+            title_lower = cocktail.title.lower()
+            # Use ratio for overall similarity and partial_ratio for substring similarity
+            ratio_score = fuzz.ratio(search_text, title_lower)
+            partial_score = fuzz.partial_ratio(search_text, title_lower)
+            best_score = max(ratio_score, partial_score)
+
+            if best_score >= self._FUZZY_MATCH_THRESHOLD:
+                scored_matches.append((cocktail, best_score))
+
+        if not scored_matches:
+            return None
+
+        # Sort by score descending, then alphabetically for ties
+        scored_matches.sort(key=lambda x: (-x[1], x[0].title))
+        return [match[0] for match in scored_matches]
 
     def _handle_short_query(
         self, search_text: str, all_cocktails: list[CocktailSearchModel], command: FreeTextQuery
@@ -254,7 +428,81 @@ class FreeTextQueryHandler:
             target_serves = int(serves_match.group(1))
             must_conditions.append(FieldCondition(key="metadata.serves", match=MatchValue(value=target_serves)))
 
-        # Ingredient exclusion (e.g., "without honey", "no rum")
+        # Base spirit filter
+        for term, spirit_value in self._BASE_SPIRIT_MAPPING.items():
+            if re.search(r"\b" + re.escape(term) + r"\b", search_text):
+                must_conditions.append(
+                    FieldCondition(key="metadata.keywords_base_spirit", match=MatchValue(value=spirit_value))
+                )
+                break  # Only match the first spirit to avoid over-filtering
+
+        # Flavor profile filter
+        matched_flavors = [
+            flavor for flavor in self._FLAVOR_PROFILE_KEYWORDS if re.search(r"\b" + flavor + r"\b", search_text)
+        ]
+        for flavor in matched_flavors[:2]:  # Limit to 2 flavor filters to avoid over-constraining
+            must_conditions.append(
+                FieldCondition(key="metadata.keywords_flavor_profile", match=MatchValue(value=flavor))
+            )
+
+        # Cocktail family filter
+        for family in self._COCKTAIL_FAMILY_KEYWORDS:
+            if re.search(r"\b" + family + r"\b", search_text):
+                must_conditions.append(
+                    FieldCondition(key="metadata.keywords_cocktail_family", match=MatchValue(value=family))
+                )
+                break
+
+        # Technique filter
+        for term, technique_value in self._TECHNIQUE_MAPPING.items():
+            if re.search(r"\b" + re.escape(term) + r"\b", search_text):
+                must_conditions.append(
+                    FieldCondition(key="metadata.keywords_technique", match=MatchValue(value=technique_value))
+                )
+                break
+
+        # Strength filter
+        for term, strength_value in self._STRENGTH_KEYWORDS.items():
+            if term in search_text:
+                must_conditions.append(
+                    FieldCondition(key="metadata.keywords_strength", match=MatchValue(value=strength_value))
+                )
+                break
+
+        # Temperature filter
+        for term, temp_value in self._TEMPERATURE_KEYWORDS.items():
+            if re.search(r"\b" + re.escape(term) + r"\b", search_text):
+                must_conditions.append(
+                    FieldCondition(key="metadata.keywords_temperature", match=MatchValue(value=temp_value))
+                )
+                break
+
+        # Season filter
+        matched_seasons = [season for season in self._SEASON_KEYWORDS if re.search(r"\b" + season + r"\b", search_text)]
+        if matched_seasons:
+            # Map "autumn" to "fall" for consistency
+            normalized_seasons = ["fall" if s == "autumn" else s for s in matched_seasons]
+            must_conditions.append(
+                FieldCondition(
+                    key="metadata.keywords_season",
+                    match=MatchAny(any=normalized_seasons),
+                )
+            )
+
+        # Occasion filter
+        for occasion in self._OCCASION_KEYWORDS:
+            if occasion in search_text:
+                must_conditions.append(
+                    FieldCondition(key="metadata.keywords_occasion", match=MatchValue(value=occasion))
+                )
+                break
+
+        # Mood filter
+        matched_moods = [mood for mood in self._MOOD_KEYWORDS if re.search(r"\b" + mood + r"\b", search_text)]
+        for mood in matched_moods[:2]:  # Limit to 2 mood filters
+            must_conditions.append(FieldCondition(key="metadata.keywords_mood", match=MatchValue(value=mood)))
+
+        # Ingredient exclusion (e.g., "without honey", "no rum", "without blue curacao")
         excluded_terms = self._extract_exclusion_terms(search_text)
         for term in excluded_terms:
             must_not_conditions.append(FieldCondition(key="metadata.ingredient_words", match=MatchValue(value=term)))
@@ -267,15 +515,57 @@ class FreeTextQueryHandler:
         return None
 
     def _extract_exclusion_terms(self, search_text: str) -> list[str]:
-        """Extract ingredient terms that should be excluded from results."""
+        """
+        Extract ingredient terms that should be excluded from results.
+        Handles multi-word ingredients like "blue curacao", "orange juice", "lime juice".
+        Each word of the multi-word phrase is added individually to match against
+        the ingredient_words field which stores split words.
+        """
+        # Stop words that signal the end of an exclusion phrase
+        _STOP_WORDS = {
+            "and",
+            "or",
+            "but",
+            "with",
+            "in",
+            "on",
+            "the",
+            "a",
+            "an",
+            "served",
+            "cocktail",
+            "cocktails",
+            "drink",
+            "drinks",
+            "that",
+            "which",
+            "for",
+            "from",
+        }
+
         terms: list[str] = []
         for pattern in self._EXCLUSION_PATTERNS:
             idx = search_text.find(pattern)
             while idx >= 0:
                 after = search_text[idx + len(pattern) :].split()
-                if after:
-                    term = after[0].strip(",.!?").lower()
-                    if len(term) >= 2 and term not in terms:
-                        terms.append(term)
+                # Collect words until we hit a stop word, another exclusion pattern, or punctuation
+                phrase_words: list[str] = []
+                for word in after:
+                    cleaned = word.strip(",.!?").lower()
+                    if cleaned in _STOP_WORDS or len(cleaned) < 2:
+                        break
+                    # Check if this word starts another exclusion pattern
+                    if any(cleaned == exc_pattern.strip() for exc_pattern in self._EXCLUSION_PATTERNS):
+                        break
+                    phrase_words.append(cleaned)
+                    # Limit to 3-word phrases to avoid runaway matching
+                    if len(phrase_words) >= 3:
+                        break
+
+                # Add each word individually for matching against ingredient_words
+                for word in phrase_words:
+                    if word not in terms:
+                        terms.append(word)
+
                 idx = search_text.find(pattern, idx + len(pattern))
         return terms
