@@ -12,18 +12,22 @@ This API works in conjunction with the [Cezzis.com Ingestion Agentic Workflow](h
 ```
 ┌─────────────────┐      ┌──────────────────────┐      ┌─────────────────────┐
 │   Client / MCP  │─────▶│  FastAPI Application  │─────▶│  Qdrant Vector DB   │
-│                 │◀─────│  (Uvicorn @ :8010)    │◀─────│  (Cloud or Local)   │
+│                 │◀─────│  (Uvicorn @ :8010)    │◀─────│  (Named Vectors)    │
 └─────────────────┘      └──────────┬───────────┘      └─────────────────────┘
                                     │
-                                    ▼
-                         ┌──────────────────────┐
-                         │  HuggingFace         │
-                         │  Inference API       │
-                         │  (Embeddings)        │
-                         └──────────────────────┘
+                    ┌───────────────┼───────────────┐
+                    ▼               ▼               ▼
+          ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+          │  TEI          │ │  TEI          │ │  TEI          │
+          │  Bi-Encoder   │ │  SPLADE       │ │  Cross-Encoder│
+          │  (Dense)      │ │  (Sparse)     │ │  (Reranker)   │
+          │  :8989        │ │  :8991        │ │  :8990        │
+          └──────────────┘ └──────────────┘ └──────────────┘
 ```
 
 The application follows a **CQRS pattern** using [MediatR](https://pypi.org/project/mediatr/) for command/query separation, with **dependency injection** via [Injector](https://pypi.org/project/injector/) and **Pydantic** models for request/response validation.
+
+All three TEI (Text Embeddings Inference) services run locally or as containers, providing dense embeddings, SPLADE sparse embeddings, and cross-encoder reranking respectively.
 
 ### Project Structure
 
@@ -53,39 +57,168 @@ src/cezzis_com_cocktails_aisearch/
 
 ## Search Algorithm
 
-The search pipeline uses a multi-strategy approach to return the most relevant cocktail results:
+The search pipeline uses a multi-stage retrieval approach combining hybrid vector search, cross-encoder reranking, and structured metadata filtering to return the most relevant cocktail results.
+
+### Pipeline Overview
+
+```
+  Query
+    │
+    ▼
+  ┌─────────────────────────┐
+  │ 1. Exact Name Match?    │──── Yes ──▶ Return immediately
+  │    (fuzzy threshold 82) │
+  └────────┬────────────────┘
+           │ No
+           ▼
+  ┌─────────────────────────┐
+  │ 2. Short Query (<4 ch)? │──── Yes ──▶ Text-based fallback on cached data
+  └────────┬────────────────┘
+           │ No
+           ▼
+  ┌─────────────────────────┐
+  │ 3. Parse Query Filters  │  IBA, glassware, ingredients, spirit, flavor,
+  │    (structured cues)    │  technique, strength, temperature, season, etc.
+  └────────┬────────────────┘
+           │
+           ▼
+  ┌─────────────────────────┐
+  │ 4. Hybrid Vector Search │  Dense (bi-encoder) + Sparse (SPLADE)
+  │    with RRF Fusion      │  via Qdrant prefetch + Fusion.RRF
+  └────────┬────────────────┘
+           │
+           ▼
+  ┌─────────────────────────┐
+  │ 5. Multi-Chunk          │  Deduplicate by cocktail ID,
+  │    Aggregation          │  compute weighted scores
+  └────────┬────────────────┘
+           │
+           ▼
+  ┌─────────────────────────┐
+  │ 6. Cross-Encoder        │  TEI /rerank endpoint re-scores
+  │    Reranking            │  query-document pairs jointly
+  └────────┬────────────────┘
+           │
+           ▼
+  ┌─────────────────────────┐
+  │ 7. Final Sort &         │  Rating overrides, pagination
+  │    Pagination           │
+  └─────────────────────────┘
+```
 
 ### 1. Exact Name Matching
 
-When the query matches a cocktail name exactly (or closely via normalized comparison), that cocktail is returned immediately — bypassing the vector search entirely. This ensures precise lookups like `"Old Fashioned"` return instant, deterministic results.
+When the query matches a cocktail name (or closely via fuzzy matching with a threshold of 82 using [RapidFuzz](https://github.com/rapidfuzz/RapidFuzz)), that cocktail is returned immediately — bypassing the vector search entirely. This ensures precise lookups like `"Old Fashioned"` return instant, deterministic results.
 
 ### 2. Short Query Fallback
 
-For queries shorter than 4 characters, a text-based fallback scans cocktail titles, descriptive titles, and ingredient names directly. This avoids sending low-signal strings through the embedding model.
+For queries shorter than 4 characters, a text-based fallback scans cocktail titles, descriptive titles, and ingredient names directly against cached data. This avoids sending low-signal strings through the embedding model.
 
-### 3. Semantic Vector Search
+### 3. Query Filter Parsing
 
-For standard queries, the search flow is:
+Natural-language cues in the query are parsed to construct Qdrant metadata filters before vector search:
 
-1. **Embed the query** — The free-text input is converted into a dense vector using HuggingFace Inference API (`feature-extraction` task via `langchain-huggingface`).
-2. **Query Qdrant** — The embedding is compared against stored cocktail description chunk vectors using cosine similarity, filtered by a configurable score threshold.
-3. **Build filters** — Natural-language cues in the query are parsed to construct Qdrant metadata filters:
-   - **IBA classification** — e.g., `"iba cocktails"`
-   - **Glassware** — e.g., `"served in a coupe"`
-   - **Ingredient exclusions** — e.g., `"without vodka"`, `"no rum"`
-   - **Ingredient count / prep time / serves** — numeric range filters
-4. **Aggregate multi-chunk results** — A single cocktail may have multiple embedded description chunks. Results are deduplicated by cocktail ID and aggregated with search statistics:
-   - `total_score` — sum of all matching chunk scores
-   - `max_score` — highest individual chunk score
-   - `avg_score` — average across matching chunks
-   - `weighted_score` — average score boosted by hit count (up to 40% boost for 5+ chunk hits), rewarding cocktails with broad topical matches
-5. **Sort and paginate** — Results are sorted by `weighted_score` descending, with optional re-ranking for rating-oriented queries (e.g., `"top rated"`).
+| Filter Type | Example Query | Metadata Field |
+|---|---|---|
+| IBA classification | `"iba cocktails"` | `is_iba` |
+| Glassware | `"served in a coupe"` | `glassware_values` |
+| Ingredient exclusion | `"without vodka"`, `"no rum"` | `ingredient_words` (must_not) |
+| Ingredient inclusion | `"made with gin"`, `"containing lime"` | `ingredient_words` (must) |
+| Base spirit | `"bourbon cocktails"` | `keywords_base_spirit` |
+| Flavor profile | `"refreshing citrus"` | `keywords_flavor_profile` |
+| Cocktail family | `"sour"`, `"tiki"`, `"fizz"` | `keywords_cocktail_family` |
+| Technique | `"shaken"`, `"stirred"` | `keywords_technique` |
+| Strength | `"strong"`, `"light"` | `keywords_strength` |
+| Temperature | `"frozen"`, `"hot"` | `keywords_temperature` |
+| Season | `"summer"`, `"winter"` | `keywords_season` |
+| Occasion | `"brunch"`, `"nightcap"` | `keywords_occasion` |
+| Mood | `"sophisticated"`, `"fun"` | `keywords_mood` |
+| Numeric ranges | ingredient count, prep time, serves | Range filters |
 
-### 4. Typeahead Search
+### 4. Hybrid Vector Search (Dense + Sparse via RRF)
+
+The core retrieval stage combines two complementary search strategies using Qdrant's native [prefetch + fusion](https://qdrant.tech/documentation/concepts/hybrid-queries/) mechanism:
+
+#### Dense Search (Bi-Encoder)
+
+- The query is embedded into a 768-dimensional dense vector using a bi-encoder model (`sentence-transformers/all-mpnet-base-v2`) served via [TEI](https://github.com/huggingface/text-embeddings-inference).
+- This captures **semantic similarity** — understanding that "refreshing citrus drink" is related to a Margarita even without shared keywords.
+- Dense embeddings are cached per query using an LRU cache (1024 entries) to avoid redundant inference calls.
+
+#### Sparse Search (SPLADE)
+
+- The same query is also encoded into a **sparse vector** using [SPLADE](https://github.com/naver/splade) (`naver/splade-cocondenser-ensembledistil`) served via TEI.
+- SPLADE produces learned term-weight sparse representations that excel at **exact keyword matching** and **term expansion** — it can surface documents containing specific ingredient names or cocktail terms that the dense model might underweight.
+- Sparse vectors have dynamic dimensionality with explicit `(indices, values)` representation using Qdrant's `SparseVector` type.
+
+#### Reciprocal Rank Fusion (RRF)
+
+Both search results are fused using **Reciprocal Rank Fusion** (`Fusion.RRF`), which combines rankings from both retrieval methods without requiring score normalization:
+
+$$RRF(d) = \sum_{r \in R} \frac{1}{k + rank_r(d)}$$
+
+where $k$ is a constant (typically 60) and $rank_r(d)$ is the rank of document $d$ in result set $r$.
+
+This is implemented via Qdrant's `prefetch` mechanism, which runs both dense and sparse searches in parallel on the server side before fusing:
+
+```python
+qdrant_client.query_points(
+    prefetch=[
+        Prefetch(query=dense_vector, using="dense", limit=N, filter=query_filter),
+        Prefetch(query=SparseVector(indices=..., values=...), using="sparse", limit=N, filter=query_filter),
+    ],
+    query=Fusion.RRF,
+    limit=N,
+)
+```
+
+#### Graceful Degradation
+
+If SPLADE encoding fails or returns empty results, the search automatically falls back to **dense-only** search, ensuring availability even during sparse encoder outages.
+
+### 5. Multi-Chunk Aggregation
+
+Each cocktail has multiple embedded description chunks (overview, ingredients, history, preparation, etc.). After retrieval, results are deduplicated by cocktail ID and aggregated with search statistics:
+
+| Statistic | Description |
+|---|---|
+| `total_score` | Sum of all matching chunk scores |
+| `max_score` | Highest individual chunk score |
+| `avg_score` | Average across matching chunks |
+| `hit_count` | Number of chunks that matched |
+| `weighted_score` | Combined relevance score (see formula below) |
+
+**Weighted scoring formula:**
+
+$$weighted\_score = max\_score \times 0.6 + avg\_score \times 0.3 + \log(hit\_count + 1) \times 0.1$$
+
+- **max_score (60%)** — strongest single-chunk match is the primary signal
+- **avg_score (30%)** — rewards consistent relevance across chunks  
+- **log(hit_count) (10%)** — diminishing returns for breadth of matching
+
+This prevents a cocktail with 5 low-scoring chunk hits (e.g., 0.3 each) from outranking one with 2 high-scoring hits (e.g., 0.8 each).
+
+### 6. Cross-Encoder Reranking
+
+After initial retrieval and aggregation, the top candidates are re-scored using a **cross-encoder** model (`cross-encoder/ms-marco-MiniLM-L-6-v2`) served via TEI's `/rerank` endpoint.
+
+Unlike bi-encoders (which encode query and document independently), the cross-encoder **jointly encodes** the query-document pair, enabling it to capture fine-grained interactions between the query and each cocktail's content. This produces more accurate relevance scores at the cost of higher latency (hence applied only to top candidates, not the full corpus).
+
+The reranking step:
+
+1. Builds a text representation for each candidate (title + descriptive title + ingredients)
+2. Sends all `(query, document)` pairs to TEI `/rerank` in a single batch request
+3. Filters candidates below the configured `score_threshold`
+4. Re-sorts by cross-encoder score descending
+5. Applies `top_k` limit
+
+If the reranker is unavailable or fails, the original ordering is preserved (graceful degradation).
+
+### 7. Typeahead Search
 
 The typeahead endpoint provides fast prefix-based suggestions without vector search. It matches the query against cocktail titles using `startsWith` first, then fills remaining slots with `contains` matches.
 
-### 5. Browse Mode
+### 8. Browse Mode
 
 When no free-text query is provided, the API returns an alphabetically sorted, paginated list of all cocktails. An optional `matches` parameter allows filtering to a specific set of cocktail IDs.
 
@@ -95,9 +228,27 @@ When no free-text query is provided, the API returns an alphabetically sorted, p
 
 The API uses [Qdrant](https://qdrant.tech/) as its vector database for storing and querying cocktail embeddings.
 
+### Collection Schema
+
+The Qdrant collection uses **named vectors** to support hybrid search with both dense and sparse representations:
+
+```json
+{
+  "vectors": {
+    "dense": { "size": 768, "distance": "Cosine" }
+  },
+  "sparse_vectors": {
+    "sparse": {}
+  }
+}
+```
+
+- **`dense`** — 768-dimensional dense vectors from the bi-encoder (`sentence-transformers/all-mpnet-base-v2`), used for semantic similarity search.
+- **`sparse`** — Variable-dimensionality sparse vectors from SPLADE (`naver/splade-cocondenser-ensembledistil`), used for learned term-weight matching.
+
 ### Embedding Storage
 
-Each cocktail is broken into multiple **description chunks** (e.g., overview, ingredients, history, preparation). Each chunk is embedded independently and stored as a separate vector point in Qdrant with rich metadata:
+Each cocktail is broken into multiple **description chunks** (e.g., overview, ingredients, history, preparation). Each chunk is embedded independently and stored as a separate vector point in Qdrant with both dense and sparse vectors plus rich metadata:
 
 | Metadata Field | Description |
 |---|---|
@@ -126,6 +277,18 @@ Each cocktail is broken into multiple **description chunks** (e.g., overview, in
 | `QDRANT_SEMANTIC_SEARCH_LIMIT` | Max vectors returned per search | `30` |
 | `QDRANT_SEMANTIC_SEARCH_SCORE_THRESHOLD` | Minimum similarity score | `0.0` |
 | `QDRANT_SEMANTIC_SEARCH_TOTAL_SCORE_THRESHOLD` | Minimum total score across chunks | `0.0` |
+
+### TEI Services Configuration
+
+| Environment Variable | Description |
+|---|---|
+| `HUGGINGFACE_INFERENCE_MODEL` | Dense bi-encoder TEI endpoint (e.g., `http://localhost:8989`) |
+| `HUGGINGFACE_API_TOKEN` | API token for TEI authentication |
+| `RERANKER_ENDPOINT` | Cross-encoder reranker TEI endpoint (e.g., `http://localhost:8990`) |
+| `RERANKER_API_KEY` | API key for reranker TEI |
+| `RERANKER_SCORE_THRESHOLD` | Minimum cross-encoder score to retain a result |
+| `SPLADE_ENDPOINT` | SPLADE sparse encoder TEI endpoint (e.g., `http://localhost:8991`) |
+| `SPLADE_API_KEY` | API key for SPLADE TEI |
 
 ---
 
@@ -267,8 +430,12 @@ docker run -p 8010:8010 --env-file .env cezzis-cocktails-aisearch
 | Component | Technology |
 |---|---|
 | Web Framework | [FastAPI](https://fastapi.tiangolo.com/) + [Uvicorn](https://www.uvicorn.org/) |
-| Vector Database | [Qdrant](https://qdrant.tech/) |
-| Embeddings | [HuggingFace Inference API](https://huggingface.co/inference-api) via LangChain |
+| Vector Database | [Qdrant](https://qdrant.tech/) (named vectors: dense + sparse) |
+| Dense Embeddings | [TEI](https://github.com/huggingface/text-embeddings-inference) bi-encoder (`sentence-transformers/all-mpnet-base-v2`, 768 dims) |
+| Sparse Embeddings | [TEI](https://github.com/huggingface/text-embeddings-inference) SPLADE (`naver/splade-cocondenser-ensembledistil`) |
+| Cross-Encoder Reranking | [TEI](https://github.com/huggingface/text-embeddings-inference) reranker (`cross-encoder/ms-marco-MiniLM-L-6-v2`) |
+| Hybrid Fusion | Reciprocal Rank Fusion (RRF) via Qdrant prefetch |
+| Fuzzy Matching | [RapidFuzz](https://github.com/rapidfuzz/RapidFuzz) |
 | CQRS / Mediator | [MediatR](https://pypi.org/project/mediatr/) |
 | Dependency Injection | [Injector](https://pypi.org/project/injector/) |
 | Configuration | [Pydantic Settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) |
