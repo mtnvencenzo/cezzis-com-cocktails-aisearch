@@ -41,29 +41,17 @@ def _make_ingredient(name: str) -> CocktailSearchIngredientModel:
 class TestRerankerService:
     """Test cases for RerankerService."""
 
-    def _make_options(self, enabled=False, endpoint="http://localhost:8990", api_key="", score_threshold=0.0):
+    def _make_options(self, endpoint="http://localhost:8990", api_key="", score_threshold=0.0):
         options = MagicMock()
-        options.enabled = enabled
         options.endpoint = endpoint
         options.api_key = api_key
         options.score_threshold = score_threshold
         return options
 
     @pytest.mark.anyio
-    async def test_rerank_disabled_returns_original(self):
-        """Test that disabled reranker returns cocktails unchanged."""
-        options = self._make_options(enabled=False)
-        service = RerankerService(reranker_options=options)
-
-        cocktails = [create_test_cocktail_model("1", "Margarita"), create_test_cocktail_model("2", "Mojito")]
-        result = await service.rerank(query="tequila", cocktails=cocktails)
-
-        assert result == cocktails
-
-    @pytest.mark.anyio
     async def test_rerank_empty_list_returns_empty(self):
         """Test that empty cocktail list returns empty."""
-        options = self._make_options(enabled=True)
+        options = self._make_options()
         service = RerankerService(reranker_options=options)
 
         result = await service.rerank(query="tequila", cocktails=[])
@@ -73,7 +61,7 @@ class TestRerankerService:
     @pytest.mark.anyio
     async def test_rerank_success_reorders_by_score(self):
         """Test that reranker reorders cocktails by cross-encoder score."""
-        options = self._make_options(enabled=True, endpoint="http://localhost:8990")
+        options = self._make_options(endpoint="http://localhost:8990")
         service = RerankerService(reranker_options=options)
 
         cocktails = [
@@ -111,7 +99,7 @@ class TestRerankerService:
     @pytest.mark.anyio
     async def test_rerank_applies_score_threshold(self):
         """Test that reranker filters out cocktails below score threshold."""
-        options = self._make_options(enabled=True, endpoint="http://localhost:8990", score_threshold=0.5)
+        options = self._make_options(endpoint="http://localhost:8990", score_threshold=0.5)
         service = RerankerService(reranker_options=options)
 
         cocktails = [
@@ -143,7 +131,7 @@ class TestRerankerService:
     @pytest.mark.anyio
     async def test_rerank_applies_top_k(self):
         """Test that reranker limits results to top_k."""
-        options = self._make_options(enabled=True, endpoint="http://localhost:8990")
+        options = self._make_options(endpoint="http://localhost:8990")
         service = RerankerService(reranker_options=options)
 
         cocktails = [create_test_cocktail_model(str(i), f"Cocktail {i}") for i in range(5)]
@@ -168,7 +156,7 @@ class TestRerankerService:
     @pytest.mark.anyio
     async def test_rerank_sets_reranker_score_on_statistics(self):
         """Test that reranker updates search_statistics.reranker_score."""
-        options = self._make_options(enabled=True, endpoint="http://localhost:8990")
+        options = self._make_options(endpoint="http://localhost:8990")
         service = RerankerService(reranker_options=options)
 
         cocktail = create_test_cocktail_model("1", "Margarita")
@@ -194,7 +182,7 @@ class TestRerankerService:
     @pytest.mark.anyio
     async def test_rerank_graceful_degradation_on_http_error(self):
         """Test that reranker returns original list on HTTP error."""
-        options = self._make_options(enabled=True, endpoint="http://localhost:8990")
+        options = self._make_options(endpoint="http://localhost:8990")
         service = RerankerService(reranker_options=options)
 
         cocktails = [create_test_cocktail_model("1", "Margarita")]
@@ -218,7 +206,7 @@ class TestRerankerService:
     @pytest.mark.anyio
     async def test_rerank_graceful_degradation_on_connection_error(self):
         """Test that reranker returns original list when TEI is unreachable."""
-        options = self._make_options(enabled=True, endpoint="http://localhost:8990")
+        options = self._make_options(endpoint="http://localhost:8990")
         service = RerankerService(reranker_options=options)
 
         cocktails = [create_test_cocktail_model("1", "Margarita")]
@@ -239,7 +227,7 @@ class TestRerankerService:
     @pytest.mark.anyio
     async def test_rerank_sends_correct_payload(self):
         """Test that reranker sends correct payload to TEI."""
-        options = self._make_options(enabled=True, endpoint="http://localhost:8990", api_key="test-key")
+        options = self._make_options(endpoint="http://localhost:8990", api_key="test-key")
         service = RerankerService(reranker_options=options)
 
         cocktails = [create_test_cocktail_model("1", "Margarita")]
@@ -272,7 +260,7 @@ class TestRerankerService:
     @pytest.mark.anyio
     async def test_rerank_mismatched_results_returns_original(self):
         """Test that reranker returns original list when result count doesn't match."""
-        options = self._make_options(enabled=True, endpoint="http://localhost:8990")
+        options = self._make_options(endpoint="http://localhost:8990")
         service = RerankerService(reranker_options=options)
 
         cocktails = [create_test_cocktail_model("1", "Margarita"), create_test_cocktail_model("2", "Mojito")]

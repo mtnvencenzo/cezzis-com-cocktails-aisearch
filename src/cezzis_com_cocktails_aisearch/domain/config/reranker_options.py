@@ -10,7 +10,6 @@ class RerankerOptions(BaseSettings):
         env_file=(".env", f".env.{os.environ.get('ENV')}"), env_file_encoding="utf-8", extra="allow"
     )
 
-    enabled: bool = Field(default=False, validation_alias="RERANKER_ENABLED")
     endpoint: str = Field(default="", validation_alias="RERANKER_ENDPOINT")
     api_key: str = Field(default="", validation_alias="RERANKER_API_KEY")
     score_threshold: float = Field(default=0.0, validation_alias="RERANKER_SCORE_THRESHOLD")
@@ -31,13 +30,11 @@ def get_reranker_options() -> RerankerOptions:
     if _reranker_options is None:
         _reranker_options = RerankerOptions()
 
-        if _reranker_options.enabled:
-            if not _reranker_options.endpoint:
-                raise ValueError("RERANKER_ENDPOINT environment variable is required when reranker is enabled")
+        if not _reranker_options.endpoint:
+            raise ValueError("RERANKER_ENDPOINT environment variable is required")
 
         _logger.info(
             "Reranker options loaded successfully.",
-            extra={"enabled": _reranker_options.enabled},
         )
 
     return _reranker_options

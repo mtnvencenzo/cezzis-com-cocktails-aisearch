@@ -32,10 +32,6 @@ class RerankerService(IRerankerService):
         If the reranker is disabled, unavailable, or fails, returns the original
         list unchanged (graceful degradation).
         """
-        if not self.options.enabled:
-            self.logger.debug("Reranker is disabled, returning original order")
-            return cocktails
-
         if not cocktails:
             return cocktails
 

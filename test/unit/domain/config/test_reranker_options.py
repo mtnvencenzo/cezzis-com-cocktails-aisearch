@@ -18,7 +18,6 @@ class TestRerankerOptions:
         with patch.dict(os.environ, {}, clear=True):
             options = RerankerOptions()
 
-            assert options.enabled is False
             assert options.endpoint == ""
             assert options.api_key == ""
             assert options.score_threshold == 0.0
@@ -28,7 +27,6 @@ class TestRerankerOptions:
         with patch.dict(
             os.environ,
             {
-                "RERANKER_ENABLED": "true",
                 "RERANKER_ENDPOINT": "http://localhost:8990",
                 "RERANKER_API_KEY": "test-api-key-123",
                 "RERANKER_SCORE_THRESHOLD": "0.5",
@@ -36,44 +34,30 @@ class TestRerankerOptions:
         ):
             options = RerankerOptions()
 
-            assert options.enabled is True
             assert options.endpoint == "http://localhost:8990"
             assert options.api_key == "test-api-key-123"
             assert options.score_threshold == 0.5
 
-    def test_get_reranker_options_disabled_no_validation(self):
-        """Test that disabled reranker does not validate endpoint."""
+    def test_get_reranker_options_raises_on_missing_endpoint(self):
+        """Test that get_reranker_options raises ValueError when endpoint is missing."""
         clear_reranker_options_cache()
 
         with patch.dict(
             os.environ,
-            {"RERANKER_ENABLED": "false", "RERANKER_ENDPOINT": ""},
-        ):
-            options = get_reranker_options()
-            assert options.enabled is False
-            assert options.endpoint == ""
-
-    def test_get_reranker_options_enabled_raises_on_missing_endpoint(self):
-        """Test that enabled reranker raises ValueError when endpoint is missing."""
-        clear_reranker_options_cache()
-
-        with patch.dict(
-            os.environ,
-            {"RERANKER_ENABLED": "true", "RERANKER_ENDPOINT": ""},
+            {"RERANKER_ENDPOINT": ""},
         ):
             with pytest.raises(ValueError, match="RERANKER_ENDPOINT"):
                 get_reranker_options()
 
-    def test_get_reranker_options_enabled_with_endpoint_succeeds(self):
-        """Test that enabled reranker with endpoint succeeds."""
+    def test_get_reranker_options_with_endpoint_succeeds(self):
+        """Test that get_reranker_options with endpoint succeeds."""
         clear_reranker_options_cache()
 
         with patch.dict(
             os.environ,
-            {"RERANKER_ENABLED": "true", "RERANKER_ENDPOINT": "http://localhost:8990"},
+            {"RERANKER_ENDPOINT": "http://localhost:8990"},
         ):
             options = get_reranker_options()
-            assert options.enabled is True
             assert options.endpoint == "http://localhost:8990"
 
     def test_get_reranker_options_singleton(self):
@@ -82,7 +66,7 @@ class TestRerankerOptions:
 
         with patch.dict(
             os.environ,
-            {"RERANKER_ENABLED": "false", "RERANKER_ENDPOINT": ""},
+            {"RERANKER_ENDPOINT": "http://localhost:8990"},
         ):
             options1 = get_reranker_options()
             options2 = get_reranker_options()
@@ -95,7 +79,7 @@ class TestRerankerOptions:
 
         with patch.dict(
             os.environ,
-            {"RERANKER_ENABLED": "false", "RERANKER_ENDPOINT": "http://first-endpoint"},
+            {"RERANKER_ENDPOINT": "http://first-endpoint"},
         ):
             options1 = get_reranker_options()
             assert options1.endpoint == "http://first-endpoint"
@@ -104,7 +88,7 @@ class TestRerankerOptions:
 
         with patch.dict(
             os.environ,
-            {"RERANKER_ENABLED": "false", "RERANKER_ENDPOINT": "http://second-endpoint"},
+            {"RERANKER_ENDPOINT": "http://second-endpoint"},
         ):
             options2 = get_reranker_options()
             assert options2.endpoint == "http://second-endpoint"
