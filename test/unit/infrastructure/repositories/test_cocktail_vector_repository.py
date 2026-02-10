@@ -16,6 +16,13 @@ from cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_r
 class TestCocktailVectorRepository:
     """Test cases for CocktailVectorRepository."""
 
+    def _make_splade_service(self):
+        """Create a mock SPLADE service."""
+        mock = MagicMock()
+        mock.encode = AsyncMock(return_value=([42, 100], [0.8, 0.5]))
+        mock.encode_batch = AsyncMock(return_value=[([42, 100], [0.8, 0.5])])
+        return mock
+
     def test_init(self):
         """Test repository initialization."""
         mock_hf_options = MagicMock()
@@ -27,18 +34,19 @@ class TestCocktailVectorRepository:
         mock_qdrant_options.collection_name = "test-collection"
 
         with patch(
-            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.QdrantVectorStore"
+            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
         ):
             repo = CocktailVectorRepository(
                 hugging_face_options=mock_hf_options,
                 qdrant_client=mock_qdrant_client,
                 qdrant_options=mock_qdrant_options,
+                splade_service=self._make_splade_service(),
             )
 
         assert repo.hugging_face_options == mock_hf_options
         assert repo.qdrant_client == mock_qdrant_client
         assert repo.qdrant_options == mock_qdrant_options
-        assert repo.vector_store is not None
+        assert repo.splade_service is not None
 
     @pytest.mark.anyio
     async def test_delete_vectors_success(self):
@@ -52,12 +60,13 @@ class TestCocktailVectorRepository:
         mock_qdrant_options.collection_name = "test-collection"
 
         with patch(
-            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.QdrantVectorStore"
+            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
         ):
             repo = CocktailVectorRepository(
                 hugging_face_options=mock_hf_options,
                 qdrant_client=mock_qdrant_client,
                 qdrant_options=mock_qdrant_options,
+                splade_service=self._make_splade_service(),
             )
 
         await repo.delete_vectors("cocktail-123")
@@ -69,7 +78,7 @@ class TestCocktailVectorRepository:
 
     @pytest.mark.anyio
     async def test_store_vectors_success(self):
-        """Test successful storage of vectors with enriched metadata."""
+        """Test successful storage of vectors with named dense + sparse vectors."""
         mock_hf_options = MagicMock()
         mock_hf_options.inference_model = "test-model"
         mock_hf_options.api_token = "test-token"
@@ -78,17 +87,26 @@ class TestCocktailVectorRepository:
         mock_qdrant_options = MagicMock()
         mock_qdrant_options.collection_name = "test-collection"
 
-        mock_vector_store = MagicMock()
-        mock_vector_store.add_texts = MagicMock(return_value=["id1", "id2"])
+        mock_splade = self._make_splade_service()
+        mock_splade.encode_batch = AsyncMock(
+            return_value=[
+                ([10, 20], [0.9, 0.4]),
+                ([30], [0.7]),
+            ]
+        )
 
         with patch(
-            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.QdrantVectorStore",
-            return_value=mock_vector_store,
-        ):
+            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
+        ) as mock_hf_class:
+            mock_embeddings = AsyncMock()
+            mock_embeddings.aembed_documents = AsyncMock(return_value=[[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]])
+            mock_hf_class.return_value = mock_embeddings
+
             repo = CocktailVectorRepository(
                 hugging_face_options=mock_hf_options,
                 qdrant_client=mock_qdrant_client,
                 qdrant_options=mock_qdrant_options,
+                splade_service=mock_splade,
             )
 
         cocktail_model = create_test_cocktail_model("cocktail-123", "Test Cocktail")
@@ -99,38 +117,50 @@ class TestCocktailVectorRepository:
 
         await repo.store_vectors("cocktail-123", chunks, cocktail_model)
 
-        mock_vector_store.add_texts.assert_called_once()
+        # Verify upsert was called with named vectors
+        mock_qdrant_client.upsert.assert_called_once()
+        call_kwargs = mock_qdrant_client.upsert.call_args[1]
+        assert call_kwargs["collection_name"] == "test-collection"
+        assert call_kwargs["wait"] is True
 
-        # Verify enriched metadata fields are stored
-        call_kwargs = mock_vector_store.add_texts.call_args[1]
-        metadatas = call_kwargs["metadatas"]
-        assert len(metadatas) == 2
-        for metadata in metadatas:
-            assert metadata["cocktail_id"] == "cocktail-123"
-            assert metadata["title"] == "test cocktail"
-            assert "is_iba" in metadata
-            assert "serves" in metadata
-            assert "prep_time_minutes" in metadata
-            assert "ingredient_count" in metadata
-            assert "ingredient_names" in metadata
-            assert "ingredient_words" in metadata
-            assert "glassware_values" in metadata
-            assert "rating" in metadata
-            assert "keywords_base_spirit" in metadata
-            assert "keywords_spirit_subtype" in metadata
-            assert "keywords_flavor_profile" in metadata
-            assert "keywords_cocktail_family" in metadata
-            assert "keywords_technique" in metadata
-            assert "keywords_strength" in metadata
-            assert "keywords_temperature" in metadata
-            assert "keywords_season" in metadata
-            assert "keywords_occasion" in metadata
-            assert "keywords_mood" in metadata
-            assert "keywords_search_terms" in metadata
+        points = call_kwargs["points"]
+        assert len(points) == 2
+
+        # Verify first point has dense + sparse named vectors
+        first_point = points[0]
+        assert "dense" in first_point.vector
+        assert first_point.vector["dense"] == [0.1, 0.2, 0.3]
+        assert "sparse" in first_point.vector
+        assert first_point.vector["sparse"].indices == [10, 20]
+        assert first_point.vector["sparse"].values == [0.9, 0.4]
+
+        # Verify metadata is stored correctly
+        metadata = first_point.payload["metadata"]
+        assert metadata["cocktail_id"] == "cocktail-123"
+        assert metadata["title"] == "test cocktail"
+        assert "is_iba" in metadata
+        assert "serves" in metadata
+        assert "prep_time_minutes" in metadata
+        assert "ingredient_count" in metadata
+        assert "ingredient_names" in metadata
+        assert "ingredient_words" in metadata
+        assert "glassware_values" in metadata
+        assert "rating" in metadata
+        assert "keywords_base_spirit" in metadata
+        assert "keywords_spirit_subtype" in metadata
+        assert "keywords_flavor_profile" in metadata
+        assert "keywords_cocktail_family" in metadata
+        assert "keywords_technique" in metadata
+        assert "keywords_strength" in metadata
+        assert "keywords_temperature" in metadata
+        assert "keywords_season" in metadata
+        assert "keywords_occasion" in metadata
+        assert "keywords_mood" in metadata
+        assert "keywords_search_terms" in metadata
 
     @pytest.mark.anyio
-    async def test_store_vectors_raises_on_empty_result(self):
-        """Test that store_vectors raises error when no results returned."""
+    async def test_store_vectors_raises_on_empty_dense_embeddings(self):
+        """Test that store_vectors raises error when no dense embeddings returned."""
         mock_hf_options = MagicMock()
         mock_hf_options.inference_model = "test-model"
         mock_hf_options.api_token = "test-token"
@@ -139,24 +169,64 @@ class TestCocktailVectorRepository:
         mock_qdrant_options = MagicMock()
         mock_qdrant_options.collection_name = "test-collection"
 
-        mock_vector_store = MagicMock()
-        mock_vector_store.add_texts = MagicMock(return_value=[])
-
         with patch(
-            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.QdrantVectorStore",
-            return_value=mock_vector_store,
-        ):
+            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
+        ) as mock_hf_class:
+            mock_embeddings = AsyncMock()
+            mock_embeddings.aembed_documents = AsyncMock(return_value=[])
+            mock_hf_class.return_value = mock_embeddings
+
             repo = CocktailVectorRepository(
                 hugging_face_options=mock_hf_options,
                 qdrant_client=mock_qdrant_client,
                 qdrant_options=mock_qdrant_options,
+                splade_service=self._make_splade_service(),
             )
 
         cocktail_model = create_test_cocktail_model("cocktail-123", "Test Cocktail")
         chunks = [CocktailDescriptionChunk(content="Test", category="desc")]
 
-        with pytest.raises(ValueError, match="No embedding results returned"):
+        with pytest.raises(ValueError, match="No dense embedding results"):
             await repo.store_vectors("cocktail-123", chunks, cocktail_model)
+
+    @pytest.mark.anyio
+    async def test_store_vectors_without_sparse_vectors(self):
+        """Test that store_vectors stores dense-only when SPLADE returns empty."""
+        mock_hf_options = MagicMock()
+        mock_hf_options.inference_model = "test-model"
+        mock_hf_options.api_token = "test-token"
+
+        mock_qdrant_client = MagicMock()
+        mock_qdrant_options = MagicMock()
+        mock_qdrant_options.collection_name = "test-collection"
+
+        mock_splade = self._make_splade_service()
+        mock_splade.encode_batch = AsyncMock(return_value=[([], [])])
+
+        with patch(
+            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
+        ) as mock_hf_class:
+            mock_embeddings = AsyncMock()
+            mock_embeddings.aembed_documents = AsyncMock(return_value=[[0.1, 0.2, 0.3]])
+            mock_hf_class.return_value = mock_embeddings
+
+            repo = CocktailVectorRepository(
+                hugging_face_options=mock_hf_options,
+                qdrant_client=mock_qdrant_client,
+                qdrant_options=mock_qdrant_options,
+                splade_service=mock_splade,
+            )
+
+        cocktail_model = create_test_cocktail_model("cocktail-123", "Test Cocktail")
+        chunks = [CocktailDescriptionChunk(content="Test", category="desc")]
+
+        await repo.store_vectors("cocktail-123", chunks, cocktail_model)
+
+        points = mock_qdrant_client.upsert.call_args[1]["points"]
+        assert len(points) == 1
+        # Only dense vector, no sparse
+        assert "dense" in points[0].vector
+        assert "sparse" not in points[0].vector
 
     @pytest.mark.anyio
     async def test_search_vectors_success(self):
@@ -194,22 +264,20 @@ class TestCocktailVectorRepository:
         mock_qdrant_client.query_points = MagicMock(return_value=mock_search_results)
 
         with patch(
-            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.QdrantVectorStore"
-        ):
-            with patch(
-                "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
-            ) as mock_hf_class:
-                mock_embeddings = AsyncMock()
-                mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
-                mock_hf_class.return_value = mock_embeddings
+            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
+        ) as mock_hf_class:
+            mock_embeddings = AsyncMock()
+            mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
+            mock_hf_class.return_value = mock_embeddings
 
-                repo = CocktailVectorRepository(
-                    hugging_face_options=mock_hf_options,
-                    qdrant_client=mock_qdrant_client,
-                    qdrant_options=mock_qdrant_options,
-                )
+            repo = CocktailVectorRepository(
+                hugging_face_options=mock_hf_options,
+                qdrant_client=mock_qdrant_client,
+                qdrant_options=mock_qdrant_options,
+                splade_service=self._make_splade_service(),
+            )
 
-                result = await repo.search_vectors("tequila cocktails")
+            result = await repo.search_vectors("tequila cocktails")
 
         assert len(result) == 1
         assert result[0].id == "cocktail-123"
@@ -217,9 +285,12 @@ class TestCocktailVectorRepository:
         assert result[0].search_statistics is not None
         assert result[0].search_statistics.total_score == 0.9
 
-        # Verify query_filter=None is used by default
+        # Verify hybrid search was used (prefetch + RRF)
         call_kwargs = mock_qdrant_client.query_points.call_args[1]
-        assert call_kwargs["query_filter"] is None
+        from qdrant_client.http.models import Fusion
+
+        assert call_kwargs["query"] == Fusion.RRF
+        assert len(call_kwargs["prefetch"]) == 2
 
     @pytest.mark.anyio
     async def test_search_vectors_with_filter(self):
@@ -243,25 +314,25 @@ class TestCocktailVectorRepository:
         test_filter = Filter(must=[FieldCondition(key="metadata.is_iba", match=MatchValue(value=True))])
 
         with patch(
-            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.QdrantVectorStore"
-        ):
-            with patch(
-                "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
-            ) as mock_hf_class:
-                mock_embeddings = AsyncMock()
-                mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
-                mock_hf_class.return_value = mock_embeddings
+            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
+        ) as mock_hf_class:
+            mock_embeddings = AsyncMock()
+            mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
+            mock_hf_class.return_value = mock_embeddings
 
-                repo = CocktailVectorRepository(
-                    hugging_face_options=mock_hf_options,
-                    qdrant_client=mock_qdrant_client,
-                    qdrant_options=mock_qdrant_options,
-                )
+            repo = CocktailVectorRepository(
+                hugging_face_options=mock_hf_options,
+                qdrant_client=mock_qdrant_client,
+                qdrant_options=mock_qdrant_options,
+                splade_service=self._make_splade_service(),
+            )
 
-                await repo.search_vectors("iba cocktails", query_filter=test_filter)
+            await repo.search_vectors("iba cocktails", query_filter=test_filter)
 
         call_kwargs = mock_qdrant_client.query_points.call_args[1]
-        assert call_kwargs["query_filter"] == test_filter
+        # Filter should be on both prefetches
+        assert call_kwargs["prefetch"][0].filter == test_filter
+        assert call_kwargs["prefetch"][1].filter == test_filter
 
     @pytest.mark.anyio
     async def test_search_vectors_handles_duplicates(self):
@@ -304,22 +375,20 @@ class TestCocktailVectorRepository:
         mock_qdrant_client.query_points = MagicMock(return_value=mock_search_results)
 
         with patch(
-            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.QdrantVectorStore"
-        ):
-            with patch(
-                "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
-            ) as mock_hf_class:
-                mock_embeddings = AsyncMock()
-                mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
-                mock_hf_class.return_value = mock_embeddings
+            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
+        ) as mock_hf_class:
+            mock_embeddings = AsyncMock()
+            mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
+            mock_hf_class.return_value = mock_embeddings
 
-                repo = CocktailVectorRepository(
-                    hugging_face_options=mock_hf_options,
-                    qdrant_client=mock_qdrant_client,
-                    qdrant_options=mock_qdrant_options,
-                )
+            repo = CocktailVectorRepository(
+                hugging_face_options=mock_hf_options,
+                qdrant_client=mock_qdrant_client,
+                qdrant_options=mock_qdrant_options,
+                splade_service=self._make_splade_service(),
+            )
 
-                result = await repo.search_vectors("tequila")
+            result = await repo.search_vectors("tequila")
 
         # Should only return one cocktail with aggregated scores
         assert len(result) == 1
@@ -370,22 +439,20 @@ class TestCocktailVectorRepository:
         mock_qdrant_client.query_points = MagicMock(return_value=mock_search_results)
 
         with patch(
-            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.QdrantVectorStore"
-        ):
-            with patch(
-                "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
-            ) as mock_hf_class:
-                mock_embeddings = AsyncMock()
-                mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
-                mock_hf_class.return_value = mock_embeddings
+            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
+        ) as mock_hf_class:
+            mock_embeddings = AsyncMock()
+            mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
+            mock_hf_class.return_value = mock_embeddings
 
-                repo = CocktailVectorRepository(
-                    hugging_face_options=mock_hf_options,
-                    qdrant_client=mock_qdrant_client,
-                    qdrant_options=mock_qdrant_options,
-                )
+            repo = CocktailVectorRepository(
+                hugging_face_options=mock_hf_options,
+                qdrant_client=mock_qdrant_client,
+                qdrant_options=mock_qdrant_options,
+                splade_service=self._make_splade_service(),
+            )
 
-                result = await repo.search_vectors("test query")
+            result = await repo.search_vectors("test query")
 
         assert len(result) == 1
         stats = result[0].search_statistics
@@ -433,22 +500,20 @@ class TestCocktailVectorRepository:
         mock_qdrant_client.query_points = MagicMock(return_value=mock_search_results)
 
         with patch(
-            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.QdrantVectorStore"
-        ):
-            with patch(
-                "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
-            ) as mock_hf_class:
-                mock_embeddings = AsyncMock()
-                mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
-                mock_hf_class.return_value = mock_embeddings
+            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
+        ) as mock_hf_class:
+            mock_embeddings = AsyncMock()
+            mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
+            mock_hf_class.return_value = mock_embeddings
 
-                repo = CocktailVectorRepository(
-                    hugging_face_options=mock_hf_options,
-                    qdrant_client=mock_qdrant_client,
-                    qdrant_options=mock_qdrant_options,
-                )
+            repo = CocktailVectorRepository(
+                hugging_face_options=mock_hf_options,
+                qdrant_client=mock_qdrant_client,
+                qdrant_options=mock_qdrant_options,
+                splade_service=self._make_splade_service(),
+            )
 
-                result = await repo.search_vectors("test")
+            result = await repo.search_vectors("test")
 
         stats = result[0].search_statistics
         # single hit: max=0.85, avg=0.85, hit_count=1
@@ -473,32 +538,30 @@ class TestCocktailVectorRepository:
         mock_qdrant_client.query_points = MagicMock(return_value=mock_search_results)
 
         with patch(
-            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.QdrantVectorStore"
-        ):
-            with patch(
-                "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
-            ) as mock_hf_class:
-                mock_embeddings = AsyncMock()
-                mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
-                mock_hf_class.return_value = mock_embeddings
+            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
+        ) as mock_hf_class:
+            mock_embeddings = AsyncMock()
+            mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
+            mock_hf_class.return_value = mock_embeddings
 
-                repo = CocktailVectorRepository(
-                    hugging_face_options=mock_hf_options,
-                    qdrant_client=mock_qdrant_client,
-                    qdrant_options=mock_qdrant_options,
-                )
+            repo = CocktailVectorRepository(
+                hugging_face_options=mock_hf_options,
+                qdrant_client=mock_qdrant_client,
+                qdrant_options=mock_qdrant_options,
+                splade_service=self._make_splade_service(),
+            )
 
-                # First call should generate embedding
-                await repo.search_vectors("tequila cocktails")
-                assert mock_embeddings.aembed_query.call_count == 1
+            # First call should generate embedding
+            await repo.search_vectors("tequila cocktails")
+            assert mock_embeddings.aembed_query.call_count == 1
 
-                # Second call with same query should use cache
-                await repo.search_vectors("tequila cocktails")
-                assert mock_embeddings.aembed_query.call_count == 1  # NOT incremented
+            # Second call with same query should use cache
+            await repo.search_vectors("tequila cocktails")
+            assert mock_embeddings.aembed_query.call_count == 1  # NOT incremented
 
-                # Different query should generate new embedding
-                await repo.search_vectors("gin cocktails")
-                assert mock_embeddings.aembed_query.call_count == 2
+            # Different query should generate new embedding
+            await repo.search_vectors("gin cocktails")
+            assert mock_embeddings.aembed_query.call_count == 2
 
     @pytest.mark.anyio
     async def test_embedding_cache_case_insensitive(self):
@@ -518,25 +581,23 @@ class TestCocktailVectorRepository:
         mock_qdrant_client.query_points = MagicMock(return_value=mock_search_results)
 
         with patch(
-            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.QdrantVectorStore"
-        ):
-            with patch(
-                "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
-            ) as mock_hf_class:
-                mock_embeddings = AsyncMock()
-                mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
-                mock_hf_class.return_value = mock_embeddings
+            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
+        ) as mock_hf_class:
+            mock_embeddings = AsyncMock()
+            mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
+            mock_hf_class.return_value = mock_embeddings
 
-                repo = CocktailVectorRepository(
-                    hugging_face_options=mock_hf_options,
-                    qdrant_client=mock_qdrant_client,
-                    qdrant_options=mock_qdrant_options,
-                )
+            repo = CocktailVectorRepository(
+                hugging_face_options=mock_hf_options,
+                qdrant_client=mock_qdrant_client,
+                qdrant_options=mock_qdrant_options,
+                splade_service=self._make_splade_service(),
+            )
 
-                await repo.search_vectors("Tequila Cocktails")
-                await repo.search_vectors("tequila cocktails")
-                # Both should resolve to same cache key
-                assert mock_embeddings.aembed_query.call_count == 1
+            await repo.search_vectors("Tequila Cocktails")
+            await repo.search_vectors("tequila cocktails")
+            # Both should resolve to same cache key
+            assert mock_embeddings.aembed_query.call_count == 1
 
     @pytest.mark.anyio
     async def test_embedding_cache_eviction(self):
@@ -556,34 +617,233 @@ class TestCocktailVectorRepository:
         mock_qdrant_client.query_points = MagicMock(return_value=mock_search_results)
 
         with patch(
-            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.QdrantVectorStore"
-        ):
-            with patch(
-                "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
-            ) as mock_hf_class:
-                mock_embeddings = AsyncMock()
-                mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
-                mock_hf_class.return_value = mock_embeddings
+            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
+        ) as mock_hf_class:
+            mock_embeddings = AsyncMock()
+            mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
+            mock_hf_class.return_value = mock_embeddings
 
-                repo = CocktailVectorRepository(
-                    hugging_face_options=mock_hf_options,
-                    qdrant_client=mock_qdrant_client,
-                    qdrant_options=mock_qdrant_options,
-                )
+            repo = CocktailVectorRepository(
+                hugging_face_options=mock_hf_options,
+                qdrant_client=mock_qdrant_client,
+                qdrant_options=mock_qdrant_options,
+                splade_service=self._make_splade_service(),
+            )
 
-                # Set a small cache size for testing
-                repo._embedding_cache_max_size = 3
+            # Set a small cache size for testing
+            repo._embedding_cache_max_size = 3
 
-                # Fill cache with 3 entries
-                await repo.search_vectors("query 1")
-                await repo.search_vectors("query 2")
-                await repo.search_vectors("query 3")
-                assert mock_embeddings.aembed_query.call_count == 3
-                assert len(repo._embedding_cache) == 3
+            # Fill cache with 3 entries
+            await repo.search_vectors("query 1")
+            await repo.search_vectors("query 2")
+            await repo.search_vectors("query 3")
+            assert mock_embeddings.aembed_query.call_count == 3
+            assert len(repo._embedding_cache) == 3
 
-                # Add a 4th should evict the oldest ("query 1")
-                await repo.search_vectors("query 4")
-                assert mock_embeddings.aembed_query.call_count == 4
-                assert len(repo._embedding_cache) == 3
-                assert "query 1" not in repo._embedding_cache
-                assert "query 4" in repo._embedding_cache
+            # Add a 4th should evict the oldest ("query 1")
+            await repo.search_vectors("query 4")
+            assert mock_embeddings.aembed_query.call_count == 4
+            assert len(repo._embedding_cache) == 3
+            assert "query 1" not in repo._embedding_cache
+            assert "query 4" in repo._embedding_cache
+
+    @pytest.mark.anyio
+    async def test_search_vectors_hybrid_uses_prefetch_rrf(self):
+        """Test that hybrid search uses prefetch + RRF fusion."""
+        from qdrant_client.http.models import Fusion, Prefetch, SparseVector
+
+        mock_hf_options = MagicMock()
+        mock_hf_options.inference_model = "test-model"
+        mock_hf_options.api_token = "test-token"
+
+        mock_qdrant_client = MagicMock()
+        mock_qdrant_options = MagicMock()
+        mock_qdrant_options.collection_name = "test-collection"
+        mock_qdrant_options.semantic_search_limit = 30
+        mock_qdrant_options.semantic_search_score_threshold = 0.5
+
+        cocktail_json = """{
+            "id": "cocktail-123",
+            "title": "Margarita",
+            "descriptiveTitle": "Classic Margarita",
+            "rating": 4.5,
+            "ingredients": [],
+            "isIba": true,
+            "serves": 1,
+            "prepTimeMinutes": 5,
+            "searchTiles": ["tequila", "lime"],
+            "glassware": []
+        }"""
+
+        mock_point = MagicMock()
+        mock_point.score = 0.9
+        mock_point.payload = {"metadata": {"cocktail_id": "cocktail-123", "model": cocktail_json}}
+
+        mock_search_results = MagicMock()
+        mock_search_results.points = [mock_point]
+        mock_qdrant_client.query_points = MagicMock(return_value=mock_search_results)
+
+        mock_splade = self._make_splade_service()
+        mock_splade.encode = AsyncMock(return_value=([42, 100], [0.8, 0.5]))
+
+        with patch(
+            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
+        ) as mock_hf_class:
+            mock_embeddings = AsyncMock()
+            mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
+            mock_hf_class.return_value = mock_embeddings
+
+            repo = CocktailVectorRepository(
+                hugging_face_options=mock_hf_options,
+                qdrant_client=mock_qdrant_client,
+                qdrant_options=mock_qdrant_options,
+                splade_service=mock_splade,
+            )
+
+            result = await repo.search_vectors("tequila cocktails")
+
+        assert len(result) == 1
+        assert result[0].id == "cocktail-123"
+
+        # Verify prefetch + RRF was used
+        call_kwargs = mock_qdrant_client.query_points.call_args[1]
+        assert call_kwargs["query"] == Fusion.RRF
+        assert len(call_kwargs["prefetch"]) == 2
+
+        # Verify dense prefetch
+        dense_prefetch = call_kwargs["prefetch"][0]
+        assert dense_prefetch.using == "dense"
+        assert dense_prefetch.query == [0.1, 0.2, 0.3]
+
+        # Verify sparse prefetch
+        sparse_prefetch = call_kwargs["prefetch"][1]
+        assert sparse_prefetch.using == "sparse"
+
+        # Verify SPLADE was called with the query text
+        mock_splade.encode.assert_called_once_with("tequila cocktails")
+
+    @pytest.mark.anyio
+    async def test_search_vectors_hybrid_fallback_on_splade_failure(self):
+        """Test that hybrid search falls back to dense-only when SPLADE fails."""
+        mock_hf_options = MagicMock()
+        mock_hf_options.inference_model = "test-model"
+        mock_hf_options.api_token = "test-token"
+
+        mock_qdrant_client = MagicMock()
+        mock_qdrant_options = MagicMock()
+        mock_qdrant_options.collection_name = "test-collection"
+        mock_qdrant_options.semantic_search_limit = 30
+        mock_qdrant_options.semantic_search_score_threshold = 0.5
+
+        mock_search_results = MagicMock()
+        mock_search_results.points = []
+        mock_qdrant_client.query_points = MagicMock(return_value=mock_search_results)
+
+        mock_splade = self._make_splade_service()
+        mock_splade.encode = AsyncMock(side_effect=Exception("SPLADE down"))
+
+        with patch(
+            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
+        ) as mock_hf_class:
+            mock_embeddings = AsyncMock()
+            mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
+            mock_hf_class.return_value = mock_embeddings
+
+            repo = CocktailVectorRepository(
+                hugging_face_options=mock_hf_options,
+                qdrant_client=mock_qdrant_client,
+                qdrant_options=mock_qdrant_options,
+                splade_service=mock_splade,
+            )
+
+            await repo.search_vectors("tequila cocktails")
+
+        # Should have used dense-only search (no prefetch, direct query)
+        call_kwargs = mock_qdrant_client.query_points.call_args[1]
+        assert call_kwargs["query"] == [0.1, 0.2, 0.3]
+        assert "prefetch" not in call_kwargs or call_kwargs.get("prefetch") is None
+
+    @pytest.mark.anyio
+    async def test_search_vectors_hybrid_fallback_on_empty_sparse(self):
+        """Test that hybrid search falls back to dense-only when SPLADE returns empty."""
+        mock_hf_options = MagicMock()
+        mock_hf_options.inference_model = "test-model"
+        mock_hf_options.api_token = "test-token"
+
+        mock_qdrant_client = MagicMock()
+        mock_qdrant_options = MagicMock()
+        mock_qdrant_options.collection_name = "test-collection"
+        mock_qdrant_options.semantic_search_limit = 30
+        mock_qdrant_options.semantic_search_score_threshold = 0.5
+
+        mock_search_results = MagicMock()
+        mock_search_results.points = []
+        mock_qdrant_client.query_points = MagicMock(return_value=mock_search_results)
+
+        mock_splade = self._make_splade_service()
+        mock_splade.encode = AsyncMock(return_value=([], []))
+
+        with patch(
+            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
+        ) as mock_hf_class:
+            mock_embeddings = AsyncMock()
+            mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
+            mock_hf_class.return_value = mock_embeddings
+
+            repo = CocktailVectorRepository(
+                hugging_face_options=mock_hf_options,
+                qdrant_client=mock_qdrant_client,
+                qdrant_options=mock_qdrant_options,
+                splade_service=mock_splade,
+            )
+
+            await repo.search_vectors("tequila cocktails")
+
+        # Should have used dense-only search
+        call_kwargs = mock_qdrant_client.query_points.call_args[1]
+        assert call_kwargs["query"] == [0.1, 0.2, 0.3]
+
+    @pytest.mark.anyio
+    async def test_search_vectors_hybrid_passes_filter_to_both_prefetches(self):
+        """Test that query filter is passed to both dense and sparse prefetches."""
+        from qdrant_client.http.models import FieldCondition, Filter, MatchValue
+
+        mock_hf_options = MagicMock()
+        mock_hf_options.inference_model = "test-model"
+        mock_hf_options.api_token = "test-token"
+
+        mock_qdrant_client = MagicMock()
+        mock_qdrant_options = MagicMock()
+        mock_qdrant_options.collection_name = "test-collection"
+        mock_qdrant_options.semantic_search_limit = 30
+        mock_qdrant_options.semantic_search_score_threshold = 0.5
+
+        mock_search_results = MagicMock()
+        mock_search_results.points = []
+        mock_qdrant_client.query_points = MagicMock(return_value=mock_search_results)
+
+        test_filter = Filter(must=[FieldCondition(key="metadata.is_iba", match=MatchValue(value=True))])
+
+        mock_splade = self._make_splade_service()
+        mock_splade.encode = AsyncMock(return_value=([10], [0.9]))
+
+        with patch(
+            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
+        ) as mock_hf_class:
+            mock_embeddings = AsyncMock()
+            mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
+            mock_hf_class.return_value = mock_embeddings
+
+            repo = CocktailVectorRepository(
+                hugging_face_options=mock_hf_options,
+                qdrant_client=mock_qdrant_client,
+                qdrant_options=mock_qdrant_options,
+                splade_service=mock_splade,
+            )
+
+            await repo.search_vectors("iba cocktails", query_filter=test_filter)
+
+        call_kwargs = mock_qdrant_client.query_points.call_args[1]
+        # Both prefetches should have the filter
+        assert call_kwargs["prefetch"][0].filter == test_filter
+        assert call_kwargs["prefetch"][1].filter == test_filter

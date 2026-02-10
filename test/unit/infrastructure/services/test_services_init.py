@@ -22,3 +22,15 @@ class TestInfrastructureServicesInit:
         from cezzis_com_cocktails_aisearch.infrastructure.services import RerankerService
 
         assert RerankerService is not None
+
+    def test_exports_isplade_service(self):
+        """Test that ISpladeService is exported."""
+        from cezzis_com_cocktails_aisearch.infrastructure.services import ISpladeService
+
+        assert ISpladeService is not None
+
+    def test_exports_splade_service(self):
+        """Test that SpladeService is exported."""
+        from cezzis_com_cocktails_aisearch.infrastructure.services import SpladeService
+
+        assert SpladeService is not None
