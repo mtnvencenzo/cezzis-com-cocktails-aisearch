@@ -10,6 +10,7 @@ from qdrant_client.http.models import (
     FieldCondition,
     Filter,
     Fusion,
+    FusionQuery,
     MatchValue,
     PointStruct,
     Prefetch,
@@ -313,7 +314,7 @@ class CocktailVectorRepository(ICocktailVectorRepository):
                     filter=query_filter,
                 ),
             ],
-            query=Fusion.RRF,
+            query=FusionQuery(fusion=Fusion.RRF),
             limit=self.qdrant_options.semantic_search_limit,
             with_payload=True,
         )

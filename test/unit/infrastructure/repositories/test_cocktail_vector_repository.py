@@ -287,9 +287,9 @@ class TestCocktailVectorRepository:
 
         # Verify hybrid search was used (prefetch + RRF)
         call_kwargs = mock_qdrant_client.query_points.call_args[1]
-        from qdrant_client.http.models import Fusion
+        from qdrant_client.http.models import Fusion, FusionQuery
 
-        assert call_kwargs["query"] == Fusion.RRF
+        assert call_kwargs["query"] == FusionQuery(fusion=Fusion.RRF)
         assert len(call_kwargs["prefetch"]) == 2
 
     @pytest.mark.anyio
@@ -650,7 +650,7 @@ class TestCocktailVectorRepository:
     @pytest.mark.anyio
     async def test_search_vectors_hybrid_uses_prefetch_rrf(self):
         """Test that hybrid search uses prefetch + RRF fusion."""
-        from qdrant_client.http.models import Fusion, Prefetch, SparseVector
+        from qdrant_client.http.models import Fusion, FusionQuery, Prefetch, SparseVector
 
         mock_hf_options = MagicMock()
         mock_hf_options.inference_model = "test-model"
@@ -707,7 +707,7 @@ class TestCocktailVectorRepository:
 
         # Verify prefetch + RRF was used
         call_kwargs = mock_qdrant_client.query_points.call_args[1]
-        assert call_kwargs["query"] == Fusion.RRF
+        assert call_kwargs["query"] == FusionQuery(fusion=Fusion.RRF)
         assert len(call_kwargs["prefetch"]) == 2
 
         # Verify dense prefetch
