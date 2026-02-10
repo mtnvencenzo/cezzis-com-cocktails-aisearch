@@ -544,7 +544,7 @@ class TestBuildQueryFilter:
         result = handler._build_query_filter("cocktails without honey")
         assert result is not None
         # Must should not have ingredient_words inclusion
-        if result.must:
+        if isinstance(result.must, list):
             inclusion_conditions = [
                 c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.ingredient_words"
             ]
@@ -1133,6 +1133,7 @@ class TestFuzzyFilterMisspellings:
         handler = self._make_handler()
         result = handler._build_query_filter("bourbn cocktails")
         assert result is not None
+        assert isinstance(result.must, list)
         spirit_condition = next(
             (c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_base_spirit"),
             None,
@@ -1146,6 +1147,7 @@ class TestFuzzyFilterMisspellings:
         handler = self._make_handler()
         result = handler._build_query_filter("shakn cocktails")
         assert result is not None
+        assert isinstance(result.must, list)
         technique_condition = next(
             (c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_technique"),
             None,
@@ -1159,6 +1161,7 @@ class TestFuzzyFilterMisspellings:
         handler = self._make_handler()
         result = handler._build_query_filter("refrashing cocktails")
         assert result is not None
+        assert isinstance(result.must, list)
         mood_condition = next(
             (c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_mood"),
             None,
@@ -1172,6 +1175,7 @@ class TestFuzzyFilterMisspellings:
         handler = self._make_handler()
         result = handler._build_query_filter("contemparary cocktails")
         assert result is not None
+        assert isinstance(result.must, list)
         iba_condition = next(
             (c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.is_iba"),
             None,
@@ -1185,6 +1189,7 @@ class TestFuzzyFilterMisspellings:
         handler = self._make_handler()
         result = handler._build_query_filter("simle cocktails")
         assert result is not None
+        assert isinstance(result.must, list)
         count_condition = next(
             (c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.ingredient_count"),
             None,
@@ -1198,6 +1203,7 @@ class TestFuzzyFilterMisspellings:
         handler = self._make_handler()
         result = handler._build_query_filter("frozn cocktails")
         assert result is not None
+        assert isinstance(result.must, list)
         temp_condition = next(
             (c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_temperature"),
             None,
@@ -1211,6 +1217,7 @@ class TestFuzzyFilterMisspellings:
         handler = self._make_handler()
         result = handler._build_query_filter("sumer cocktails")
         assert result is not None
+        assert isinstance(result.must, list)
         season_condition = next(
             (c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_season"),
             None,
@@ -1224,7 +1231,7 @@ class TestFuzzyFilterMisspellings:
         handler = self._make_handler()
         result = handler._build_query_filter("gn cocktails")
         # "gn" should NOT fuzzy-match "gin" since gin < 5 chars
-        if result is not None and result.must:
+        if result is not None and isinstance(result.must, list):
             spirit_conditions = [
                 c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_base_spirit"
             ]
