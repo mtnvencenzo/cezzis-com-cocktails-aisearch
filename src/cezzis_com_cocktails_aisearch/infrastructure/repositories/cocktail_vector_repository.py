@@ -293,7 +293,7 @@ class CocktailVectorRepository(ICocktailVectorRepository):
             self.logger.debug("SPLADE returned empty sparse vector, falling back to dense-only")
             return self._dense_only_search(query_vector, query_filter)
 
-        prefetch_limit = self.qdrant_options.semantic_search_limit
+        prefetch_limit = self.qdrant_options.semantic_search_prefetch_limit
 
         return self.qdrant_client.query_points(
             collection_name=self.qdrant_options.collection_name,

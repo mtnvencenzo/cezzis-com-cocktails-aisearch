@@ -274,7 +274,8 @@ Each cocktail is broken into multiple **description chunks** (e.g., overview, in
 | `QDRANT_COLLECTION_NAME` | Vector collection name | _(required)_ |
 | `QDRANT_VECTOR_SIZE` | Embedding dimensionality | _(required)_ |
 | `QDRANT_USE_HTTPS` | Enable HTTPS | `true` |
-| `QDRANT_SEMANTIC_SEARCH_LIMIT` | Max vectors returned per search | `30` |
+| `QDRANT_SEMANTIC_SEARCH_LIMIT` | Max vectors returned from RRF fusion | `30` |
+| `QDRANT_SEMANTIC_SEARCH_PREFETCH_LIMIT` | Max vectors per prefetch branch (dense/sparse) | `100` |
 | `QDRANT_SEMANTIC_SEARCH_SCORE_THRESHOLD` | Minimum similarity score | `0.0` |
 | `QDRANT_SEMANTIC_SEARCH_TOTAL_SCORE_THRESHOLD` | Minimum total score across chunks | `0.0` |
 

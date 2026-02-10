@@ -17,6 +17,7 @@ class QdrantOptions(BaseSettings):
     vector_size: int = Field(default=0, validation_alias="QDRANT_VECTOR_SIZE")
     use_https: bool = Field(default=True, validation_alias="QDRANT_USE_HTTPS")
     semantic_search_limit: int = Field(default=30, validation_alias="QDRANT_SEMANTIC_SEARCH_LIMIT")
+    semantic_search_prefetch_limit: int = Field(default=100, validation_alias="QDRANT_SEMANTIC_SEARCH_PREFETCH_LIMIT")
     semantic_search_score_threshold: float = Field(
         default=0.0, validation_alias="QDRANT_SEMANTIC_SEARCH_SCORE_THRESHOLD"
     )
@@ -51,6 +52,8 @@ def get_qdrant_options() -> QdrantOptions:
             raise ValueError("QDRANT_VECTOR_SIZE environment variable is required")
         if _qdrant_options.semantic_search_limit <= 0:
             raise ValueError("QDRANT_SEMANTIC_SEARCH_LIMIT must be greater than 0")
+        if _qdrant_options.semantic_search_prefetch_limit <= 0:
+            raise ValueError("QDRANT_SEMANTIC_SEARCH_PREFETCH_LIMIT must be greater than 0")
         if _qdrant_options.semantic_search_score_threshold < 0.0:
             raise ValueError("QDRANT_SEMANTIC_SEARCH_SCORE_THRESHOLD must be non-negative")
         if _qdrant_options.semantic_search_total_score_threshold < 0.0:

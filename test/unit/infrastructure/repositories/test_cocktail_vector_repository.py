@@ -239,6 +239,7 @@ class TestCocktailVectorRepository:
         mock_qdrant_options = MagicMock()
         mock_qdrant_options.collection_name = "test-collection"
         mock_qdrant_options.semantic_search_limit = 30
+        mock_qdrant_options.semantic_search_prefetch_limit = 100
         mock_qdrant_options.semantic_search_score_threshold = 0.5
 
         # Create a proper CocktailModel JSON with all required fields
@@ -305,6 +306,7 @@ class TestCocktailVectorRepository:
         mock_qdrant_options = MagicMock()
         mock_qdrant_options.collection_name = "test-collection"
         mock_qdrant_options.semantic_search_limit = 30
+        mock_qdrant_options.semantic_search_prefetch_limit = 100
         mock_qdrant_options.semantic_search_score_threshold = 0.5
 
         mock_search_results = MagicMock()
@@ -345,6 +347,7 @@ class TestCocktailVectorRepository:
         mock_qdrant_options = MagicMock()
         mock_qdrant_options.collection_name = "test-collection"
         mock_qdrant_options.semantic_search_limit = 30
+        mock_qdrant_options.semantic_search_prefetch_limit = 100
         mock_qdrant_options.semantic_search_score_threshold = 0.5
 
         # Create a proper CocktailModel JSON with all required fields
@@ -411,6 +414,7 @@ class TestCocktailVectorRepository:
         mock_qdrant_options = MagicMock()
         mock_qdrant_options.collection_name = "test-collection"
         mock_qdrant_options.semantic_search_limit = 30
+        mock_qdrant_options.semantic_search_prefetch_limit = 100
         mock_qdrant_options.semantic_search_score_threshold = 0.0
 
         cocktail_json = """{
@@ -476,6 +480,7 @@ class TestCocktailVectorRepository:
         mock_qdrant_options = MagicMock()
         mock_qdrant_options.collection_name = "test-collection"
         mock_qdrant_options.semantic_search_limit = 30
+        mock_qdrant_options.semantic_search_prefetch_limit = 100
         mock_qdrant_options.semantic_search_score_threshold = 0.0
 
         cocktail_json = """{
@@ -531,6 +536,7 @@ class TestCocktailVectorRepository:
         mock_qdrant_options = MagicMock()
         mock_qdrant_options.collection_name = "test-collection"
         mock_qdrant_options.semantic_search_limit = 30
+        mock_qdrant_options.semantic_search_prefetch_limit = 100
         mock_qdrant_options.semantic_search_score_threshold = 0.5
 
         mock_search_results = MagicMock()
@@ -574,6 +580,7 @@ class TestCocktailVectorRepository:
         mock_qdrant_options = MagicMock()
         mock_qdrant_options.collection_name = "test-collection"
         mock_qdrant_options.semantic_search_limit = 30
+        mock_qdrant_options.semantic_search_prefetch_limit = 100
         mock_qdrant_options.semantic_search_score_threshold = 0.5
 
         mock_search_results = MagicMock()
@@ -610,6 +617,7 @@ class TestCocktailVectorRepository:
         mock_qdrant_options = MagicMock()
         mock_qdrant_options.collection_name = "test-collection"
         mock_qdrant_options.semantic_search_limit = 30
+        mock_qdrant_options.semantic_search_prefetch_limit = 100
         mock_qdrant_options.semantic_search_score_threshold = 0.5
 
         mock_search_results = MagicMock()
@@ -660,6 +668,7 @@ class TestCocktailVectorRepository:
         mock_qdrant_options = MagicMock()
         mock_qdrant_options.collection_name = "test-collection"
         mock_qdrant_options.semantic_search_limit = 30
+        mock_qdrant_options.semantic_search_prefetch_limit = 100
         mock_qdrant_options.semantic_search_score_threshold = 0.5
 
         cocktail_json = """{
@@ -710,14 +719,19 @@ class TestCocktailVectorRepository:
         assert call_kwargs["query"] == FusionQuery(fusion=Fusion.RRF)
         assert len(call_kwargs["prefetch"]) == 2
 
-        # Verify dense prefetch
+        # Verify dense prefetch uses prefetch_limit (100), not fusion limit (30)
         dense_prefetch = call_kwargs["prefetch"][0]
         assert dense_prefetch.using == "dense"
         assert dense_prefetch.query == [0.1, 0.2, 0.3]
+        assert dense_prefetch.limit == 100
 
-        # Verify sparse prefetch
+        # Verify sparse prefetch uses prefetch_limit (100)
         sparse_prefetch = call_kwargs["prefetch"][1]
         assert sparse_prefetch.using == "sparse"
+        assert sparse_prefetch.limit == 100
+
+        # Verify fusion limit is the main semantic_search_limit (30)
+        assert call_kwargs["limit"] == 30
 
         # Verify SPLADE was called with the query text
         mock_splade.encode.assert_called_once_with("tequila cocktails")
@@ -733,6 +747,7 @@ class TestCocktailVectorRepository:
         mock_qdrant_options = MagicMock()
         mock_qdrant_options.collection_name = "test-collection"
         mock_qdrant_options.semantic_search_limit = 30
+        mock_qdrant_options.semantic_search_prefetch_limit = 100
         mock_qdrant_options.semantic_search_score_threshold = 0.5
 
         mock_search_results = MagicMock()
@@ -774,6 +789,7 @@ class TestCocktailVectorRepository:
         mock_qdrant_options = MagicMock()
         mock_qdrant_options.collection_name = "test-collection"
         mock_qdrant_options.semantic_search_limit = 30
+        mock_qdrant_options.semantic_search_prefetch_limit = 100
         mock_qdrant_options.semantic_search_score_threshold = 0.5
 
         mock_search_results = MagicMock()
@@ -816,6 +832,7 @@ class TestCocktailVectorRepository:
         mock_qdrant_options = MagicMock()
         mock_qdrant_options.collection_name = "test-collection"
         mock_qdrant_options.semantic_search_limit = 30
+        mock_qdrant_options.semantic_search_prefetch_limit = 100
         mock_qdrant_options.semantic_search_score_threshold = 0.5
 
         mock_search_results = MagicMock()
@@ -847,3 +864,54 @@ class TestCocktailVectorRepository:
         # Both prefetches should have the filter
         assert call_kwargs["prefetch"][0].filter == test_filter
         assert call_kwargs["prefetch"][1].filter == test_filter
+
+    @pytest.mark.anyio
+    async def test_search_vectors_hybrid_prefetch_limit_differs_from_fusion_limit(self):
+        """Test that prefetch branches use prefetch_limit while fusion output uses semantic_search_limit.
+
+        This ensures the retrieval stage casts a wider net (e.g., 150 per branch)
+        while the RRF fusion output is limited (e.g., 40), feeding a manageable
+        number of candidates to the reranker.
+        """
+        mock_hf_options = MagicMock()
+        mock_hf_options.inference_model = "test-model"
+        mock_hf_options.api_token = "test-token"
+
+        mock_qdrant_client = MagicMock()
+        mock_qdrant_options = MagicMock()
+        mock_qdrant_options.collection_name = "test-collection"
+        mock_qdrant_options.semantic_search_limit = 40
+        mock_qdrant_options.semantic_search_prefetch_limit = 150
+        mock_qdrant_options.semantic_search_score_threshold = 0.0
+
+        mock_search_results = MagicMock()
+        mock_search_results.points = []
+        mock_qdrant_client.query_points = MagicMock(return_value=mock_search_results)
+
+        mock_splade = self._make_splade_service()
+        mock_splade.encode = AsyncMock(return_value=([10, 20], [0.9, 0.4]))
+
+        with patch(
+            "cezzis_com_cocktails_aisearch.infrastructure.repositories.cocktail_vector_repository.HuggingFaceEndpointEmbeddings"
+        ) as mock_hf_class:
+            mock_embeddings = AsyncMock()
+            mock_embeddings.aembed_query = AsyncMock(return_value=[0.1, 0.2, 0.3])
+            mock_hf_class.return_value = mock_embeddings
+
+            repo = CocktailVectorRepository(
+                hugging_face_options=mock_hf_options,
+                qdrant_client=mock_qdrant_client,
+                qdrant_options=mock_qdrant_options,
+                splade_service=mock_splade,
+            )
+
+            await repo.search_vectors("cocktails with berries")
+
+        call_kwargs = mock_qdrant_client.query_points.call_args[1]
+
+        # Prefetch branches should use the larger prefetch_limit
+        assert call_kwargs["prefetch"][0].limit == 150
+        assert call_kwargs["prefetch"][1].limit == 150
+
+        # RRF fusion output should use the smaller semantic_search_limit
+        assert call_kwargs["limit"] == 40

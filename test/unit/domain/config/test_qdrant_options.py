@@ -25,6 +25,7 @@ class TestQdrantOptions:
             assert options.vector_size == 0
             assert options.use_https is True
             assert options.semantic_search_limit == 30
+            assert options.semantic_search_prefetch_limit == 100
             assert options.semantic_search_score_threshold == 0.0
             assert options.semantic_search_total_score_threshold == 0.0
 
@@ -40,6 +41,7 @@ class TestQdrantOptions:
                 "QDRANT_VECTOR_SIZE": "768",
                 "QDRANT_USE_HTTPS": "false",
                 "QDRANT_SEMANTIC_SEARCH_LIMIT": "50",
+                "QDRANT_SEMANTIC_SEARCH_PREFETCH_LIMIT": "200",
                 "QDRANT_SEMANTIC_SEARCH_SCORE_THRESHOLD": "0.7",
                 "QDRANT_SEMANTIC_SEARCH_TOTAL_SCORE_THRESHOLD": "1.5",
             },
@@ -53,6 +55,7 @@ class TestQdrantOptions:
             assert options.vector_size == 768
             assert options.use_https is False
             assert options.semantic_search_limit == 50
+            assert options.semantic_search_prefetch_limit == 200
             assert options.semantic_search_score_threshold == 0.7
             assert options.semantic_search_total_score_threshold == 1.5
 
@@ -88,6 +91,22 @@ class TestQdrantOptions:
             },
         ):
             with pytest.raises(ValueError, match="QDRANT_SEMANTIC_SEARCH_SCORE_THRESHOLD"):
+                get_qdrant_options()
+
+    def test_get_qdrant_options_raises_on_invalid_prefetch_limit(self):
+        """Test that get_qdrant_options raises ValueError for invalid prefetch limit."""
+        clear_qdrant_options_cache()
+
+        with patch.dict(
+            os.environ,
+            {
+                "QDRANT_HOST": "localhost",
+                "QDRANT_COLLECTION_NAME": "test",
+                "QDRANT_VECTOR_SIZE": "768",
+                "QDRANT_SEMANTIC_SEARCH_PREFETCH_LIMIT": "0",
+            },
+        ):
+            with pytest.raises(ValueError, match="QDRANT_SEMANTIC_SEARCH_PREFETCH_LIMIT"):
                 get_qdrant_options()
 
     def test_get_qdrant_options_singleton(self):

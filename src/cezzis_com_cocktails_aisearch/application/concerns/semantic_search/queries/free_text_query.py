@@ -60,19 +60,6 @@ class FreeTextQueryHandler:
         "exclude ",
     ]
 
-    # Patterns that indicate ingredient inclusion
-    _INCLUSION_PATTERNS: list[str] = [
-        "made with ",
-        "that include ",
-        "that have ",
-        "containing ",
-        "contains ",
-        "featuring ",
-        "using ",
-        "have ",
-        "with ",
-    ]
-
     # Fuzzy matching threshold (0-100) for cocktail name matching
     _FUZZY_MATCH_THRESHOLD: int = 82
 
@@ -600,11 +587,6 @@ class FreeTextQueryHandler:
         for term in excluded_terms:
             must_not_conditions.append(FieldCondition(key="metadata.ingredient_words", match=MatchValue(value=term)))
 
-        # Ingredient inclusion (e.g., "with honey", "using lime", "made with bourbon")
-        included_terms = self._extract_inclusion_terms(search_text)
-        for term in included_terms:
-            must_conditions.append(FieldCondition(key="metadata.ingredient_words", match=MatchValue(value=term)))
-
         if must_conditions or must_not_conditions:
             return Filter(
                 must=must_conditions if must_conditions else None,
@@ -673,80 +655,6 @@ class FreeTextQueryHandler:
                     # Add each word individually for matching against ingredient_words
                     for word in phrase_words:
                         if word not in terms:
-                            terms.append(word)
-
-                    i = after_start + max(len(phrase_words), 1)
-                else:
-                    i += 1
-
-        return terms
-
-    def _extract_inclusion_terms(self, search_text: str) -> list[str]:
-        """
-        Extract ingredient terms that should be included in results.
-        Handles patterns like "with honey", "using lime juice", "made with bourbon".
-        Each word of a multi-word phrase is added individually to match against
-        the ingredient_words field which stores split words.
-        Uses fuzzy matching for pattern detection to handle misspellings.
-
-        Skips terms that are also detected as keyword metadata filters (base spirits,
-        glassware, etc.) to avoid double-filtering.
-        """
-        # Stop words that signal the end of an inclusion phrase
-        _STOP_WORDS = {
-            "and",
-            "or",
-            "but",
-            "without",
-            "no",
-            "in",
-            "on",
-            "the",
-            "a",
-            "an",
-            "served",
-            "cocktail",
-            "cocktails",
-            "drink",
-            "drinks",
-            "that",
-            "which",
-            "for",
-            "from",
-        }
-
-        # Pre-compute first words of exclusion patterns for stop detection
-        _EXCLUSION_FIRST_WORDS = [p.strip().split()[0] for p in self._EXCLUSION_PATTERNS]
-
-        terms: list[str] = []
-        excluded_terms = set(self._extract_exclusion_terms(search_text))
-        text_words = search_text.split()
-
-        for pattern in self._INCLUSION_PATTERNS:
-            pattern_words = pattern.strip().split()
-            pat_len = len(pattern_words)
-
-            i = 0
-            while i <= len(text_words) - pat_len:
-                if all(self._fuzzy_word_match(text_words[i + j], pattern_words[j]) for j in range(pat_len)):
-                    # Pattern matched at word index i; extract words after it
-                    after_start = i + pat_len
-                    phrase_words: list[str] = []
-                    for k in range(after_start, len(text_words)):
-                        cleaned = text_words[k].strip(",.!?").lower()
-                        if cleaned in _STOP_WORDS or len(cleaned) < 2:
-                            break
-                        # Check if this word starts an exclusion pattern
-                        if any(self._fuzzy_word_match(cleaned, fw) for fw in _EXCLUSION_FIRST_WORDS):
-                            break
-                        phrase_words.append(cleaned)
-                        # Limit to 3-word phrases to avoid runaway matching
-                        if len(phrase_words) >= 3:
-                            break
-
-                    # Add each word individually for matching against ingredient_words
-                    for word in phrase_words:
-                        if word not in terms and word not in excluded_terms:
                             terms.append(word)
 
                     i = after_start + max(len(phrase_words), 1)

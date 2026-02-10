@@ -499,47 +499,19 @@ class TestBuildQueryFilter:
         assert isinstance(result.must_not[0].match, MatchValue)
         assert result.must_not[0].match.value == "honey"
 
-    def test_inclusion_filter_with_honey(self):
-        """Test that 'with honey' triggers ingredient inclusion filter."""
+    def test_inclusion_does_not_create_hard_filter(self):
+        """Test that 'with honey' does NOT create a hard must filter (vector search handles inclusion)."""
         handler = self._make_handler()
         result = handler._build_query_filter("cocktails with honey")
-        assert result is not None
-        assert isinstance(result.must, list)
-        inclusion_conditions = [
-            c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.ingredient_words"
-        ]
-        assert len(inclusion_conditions) == 1
-        assert isinstance(inclusion_conditions[0].match, MatchValue)
-        assert inclusion_conditions[0].match.value == "honey"
+        # No hard ingredient inclusion filter — vector search handles positive matching semantically
+        if result is not None and isinstance(result.must, list):
+            inclusion_conditions = [
+                c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.ingredient_words"
+            ]
+            assert len(inclusion_conditions) == 0
 
-    def test_inclusion_filter_using_pattern(self):
-        """Test that 'using lime' triggers ingredient inclusion filter."""
-        handler = self._make_handler()
-        result = handler._build_query_filter("cocktails using lime")
-        assert result is not None
-        assert isinstance(result.must, list)
-        inclusion_conditions = [
-            c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.ingredient_words"
-        ]
-        assert len(inclusion_conditions) == 1
-        assert isinstance(inclusion_conditions[0].match, MatchValue)
-        assert inclusion_conditions[0].match.value == "lime"
-
-    def test_inclusion_filter_made_with_pattern(self):
-        """Test that 'made with bourbon' triggers ingredient inclusion filter."""
-        handler = self._make_handler()
-        result = handler._build_query_filter("cocktails made with bourbon")
-        assert result is not None
-        assert isinstance(result.must, list)
-        inclusion_conditions = [
-            c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.ingredient_words"
-        ]
-        assert len(inclusion_conditions) >= 1
-        inclusion_values = [c.match.value for c in inclusion_conditions if isinstance(c.match, MatchValue)]
-        assert "bourbon" in inclusion_values
-
-    def test_inclusion_does_not_trigger_on_without(self):
-        """Test that 'without honey' does NOT trigger ingredient inclusion."""
+    def test_exclusion_still_works_without_inclusion(self):
+        """Test that 'without honey' still creates exclusion filter."""
         handler = self._make_handler()
         result = handler._build_query_filter("cocktails without honey")
         assert result is not None
@@ -554,19 +526,18 @@ class TestBuildQueryFilter:
         assert isinstance(result.must_not, list)
         assert len(result.must_not) == 1
 
-    def test_inclusion_and_exclusion_combined(self):
-        """Test that 'with lime without honey' includes lime and excludes honey."""
+    def test_exclusion_only_from_combined_query(self):
+        """Test that 'with lime without honey' only creates exclusion, not inclusion."""
         handler = self._make_handler()
         result = handler._build_query_filter("cocktails with lime without honey")
         assert result is not None
-        assert isinstance(result.must, list)
-        inclusion_conditions = [
-            c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.ingredient_words"
-        ]
-        assert len(inclusion_conditions) == 1
-        assert isinstance(inclusion_conditions[0].match, MatchValue)
-        assert inclusion_conditions[0].match.value == "lime"
-        # Exclusion
+        # No ingredient inclusion in must
+        if isinstance(result.must, list):
+            inclusion_conditions = [
+                c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.ingredient_words"
+            ]
+            assert len(inclusion_conditions) == 0
+        # Exclusion still present
         assert result.must_not is not None
         assert isinstance(result.must_not, list)
         assert len(result.must_not) == 1
@@ -657,99 +628,6 @@ class TestExtractExclusionTerms:
     def test_that_exclude_pattern(self):
         handler = self._make_handler()
         terms = handler._extract_exclusion_terms("cocktails that exclude lime")
-        assert terms == ["lime"]
-
-
-class TestExtractInclusionTerms:
-    """Test cases for _extract_inclusion_terms."""
-
-    def _make_handler(self):
-        mock_repository = AsyncMock()
-        mock_qdrant_options = MagicMock()
-        mock_reranker = AsyncMock()
-        mock_reranker.rerank = AsyncMock(side_effect=lambda query, cocktails, top_k=10: cocktails)
-        return FreeTextQueryHandler(
-            cocktail_vector_repository=mock_repository,
-            qdrant_opotions=mock_qdrant_options,
-            reranker_service=mock_reranker,
-        )
-
-    def test_with_pattern(self):
-        handler = self._make_handler()
-        terms = handler._extract_inclusion_terms("cocktails with honey")
-        assert terms == ["honey"]
-
-    def test_using_pattern(self):
-        handler = self._make_handler()
-        terms = handler._extract_inclusion_terms("cocktails using lime")
-        assert terms == ["lime"]
-
-    def test_containing_pattern(self):
-        handler = self._make_handler()
-        terms = handler._extract_inclusion_terms("cocktails containing ginger")
-        assert terms == ["ginger"]
-
-    def test_contains_pattern(self):
-        handler = self._make_handler()
-        terms = handler._extract_inclusion_terms("cocktails contains honey")
-        assert terms == ["honey"]
-
-    def test_made_with_pattern(self):
-        handler = self._make_handler()
-        terms = handler._extract_inclusion_terms("cocktails made with bourbon")
-        assert terms == ["bourbon"]
-
-    def test_no_inclusion_in_plain_query(self):
-        handler = self._make_handler()
-        terms = handler._extract_inclusion_terms("tequila cocktails")
-        assert terms == []
-
-    def test_without_does_not_trigger_inclusion(self):
-        """Test that 'without honey' does NOT trigger inclusion for honey."""
-        handler = self._make_handler()
-        terms = handler._extract_inclusion_terms("cocktails without honey")
-        assert "honey" not in terms
-
-    def test_multi_word_inclusion(self):
-        """Test that multi-word ingredients are extracted."""
-        handler = self._make_handler()
-        terms = handler._extract_inclusion_terms("cocktails with lime juice")
-        assert "lime" in terms
-        assert "juice" in terms
-
-    def test_inclusion_stops_at_stop_word(self):
-        """Test that extraction stops at stop words."""
-        handler = self._make_handler()
-        terms = handler._extract_inclusion_terms("cocktails with honey and lime")
-        assert "honey" in terms
-        # 'and' is a stop word, so 'lime' is not part of the honey inclusion
-        assert "lime" not in terms
-
-    def test_inclusion_excludes_already_excluded_terms(self):
-        """Test that terms in exclusion are not also included."""
-        handler = self._make_handler()
-        terms = handler._extract_inclusion_terms("cocktails with lime without lime")
-        assert "lime" not in terms
-
-    def test_multi_word_inclusion_max_three_words(self):
-        """Test that multi-word extraction is capped at 3 words."""
-        handler = self._make_handler()
-        terms = handler._extract_inclusion_terms("cocktails with fresh squeezed blood orange juice")
-        assert len(terms) == 3
-
-    def test_featuring_pattern(self):
-        handler = self._make_handler()
-        terms = handler._extract_inclusion_terms("cocktails featuring honey")
-        assert terms == ["honey"]
-
-    def test_have_pattern(self):
-        handler = self._make_handler()
-        terms = handler._extract_inclusion_terms("cocktails that have ginger")
-        assert terms == ["ginger"]
-
-    def test_that_include_pattern(self):
-        handler = self._make_handler()
-        terms = handler._extract_inclusion_terms("cocktails that include lime")
         assert terms == ["lime"]
 
 
@@ -1262,18 +1140,6 @@ class TestFuzzyExtractionMisspellings:
         """Test that 'exluding' fuzzy-matches 'excluding' in exclusion pattern."""
         handler = self._make_handler()
         terms = handler._extract_exclusion_terms("cocktails exluding honey")
-        assert "honey" in terms
-
-    def test_misspelled_containing_extracts_inclusion(self):
-        """Test that 'contaning' fuzzy-matches 'containing' in inclusion pattern."""
-        handler = self._make_handler()
-        terms = handler._extract_inclusion_terms("cocktails contaning ginger")
-        assert "ginger" in terms
-
-    def test_misspelled_featuring_extracts_inclusion(self):
-        """Test that 'feturing' fuzzy-matches 'featuring' in inclusion pattern."""
-        handler = self._make_handler()
-        terms = handler._extract_inclusion_terms("cocktails feturing honey")
         assert "honey" in terms
 
 
