@@ -291,7 +291,10 @@ class FreeTextQueryHandler:
         )
 
         # Apply rating-based sort override for rating queries
-        if any(term in search_text for term in ["top rated", "best rated", "highest rated", "popular"]):
+        if any(
+            self._fuzzy_keyword_in_text(search_text, term)
+            for term in ["top rated", "best rated", "highest rated", "popular"]
+        ):
             sorted_cocktails = sorted(sorted_cocktails, key=lambda c: c.rating, reverse=True)
 
         return sorted_cocktails[skip : skip + take]
@@ -327,16 +330,26 @@ class FreeTextQueryHandler:
         """
         search_lower = search_text.lower().strip()
 
-        # Remove common suffixes for matching
+        # Remove common suffixes for matching (singular and plural) with fuzzy tolerance
         search_normalized = search_lower
-        for suffix in [" cocktail", " drink", " recipe"]:
-            if search_normalized.endswith(suffix):
-                search_normalized = search_normalized[: -len(suffix)].strip()
+        _SUFFIX_WORDS = ["cocktails", "cocktail", "drinks", "drink", "recipes", "recipe"]
+        words = search_normalized.split()
+        if len(words) > 1 and any(self._fuzzy_word_match(words[-1], sw) for sw in _SUFFIX_WORDS):
+            search_normalized = " ".join(words[:-1])
 
         # Only do name matching if the search looks like a cocktail name
-        # (not a descriptive query like "cocktails with honey")
-        descriptive_prefixes = ["cocktails ", "drinks ", "recipes ", "show me ", "find "]
-        if any(search_lower.startswith(prefix) for prefix in descriptive_prefixes):
+        # (not a descriptive query like "cocktails with honey" or "gin cocktails")
+        descriptive_prefixes = ["cocktails", "drinks", "recipes", "show me", "find"]
+        text_words = search_lower.split()
+        for prefix in descriptive_prefixes:
+            prefix_word_count = len(prefix.split())
+            if len(text_words) > prefix_word_count and self._fuzzy_startswith(search_lower, prefix):
+                return None
+
+        # Queries like "gin cocktails" or "vodka drinks" are descriptive, not name lookups
+        # Uses exact matching to preserve the intentional singular/plural distinction:
+        # "gin cocktails" (plural) → skip name matching; "champagne cocktail" (singular) → proceed
+        if len(text_words) > 1 and text_words[-1] in {"cocktails", "drinks", "recipes"}:
             return None
 
         # Find exact matches (highest priority)
@@ -407,6 +420,47 @@ class FreeTextQueryHandler:
                     return True
         return False
 
+    # --- Fuzzy matching helpers for misspelling tolerance ---
+
+    def _fuzzy_word_match(self, word: str, target: str, threshold: int = 80) -> bool:
+        """Check if two words fuzzy-match. Uses exact match for short targets (<5 chars)
+        to avoid false positives with words like 'gin', 'rum', 'rye', 'no', 'dry'."""
+        if len(target) < 5:
+            return word == target
+        return fuzz.ratio(word, target) >= threshold
+
+    def _fuzzy_keyword_in_text(self, search_text: str, keyword: str, threshold: int = 80) -> bool:
+        """Check if a keyword (single or multi-word) appears in search_text with fuzzy tolerance.
+        Words shorter than 5 characters require exact matching to avoid false positives."""
+        text_words = [w.strip(",.!?;:") for w in search_text.split()]
+        keyword_words = keyword.strip().split()
+
+        if len(keyword_words) == 1:
+            return any(self._fuzzy_word_match(w, keyword_words[0], threshold) for w in text_words)
+
+        # Multi-word: check consecutive word windows
+        kw_len = len(keyword_words)
+        for i in range(len(text_words) - kw_len + 1):
+            if all(self._fuzzy_word_match(text_words[i + j], keyword_words[j], threshold) for j in range(kw_len)):
+                return True
+        return False
+
+    def _fuzzy_endswith(self, search_text: str, suffix_words: list[str], threshold: int = 80) -> bool:
+        """Check if the last word of search_text fuzzy-matches any of the given suffix words."""
+        words = search_text.split()
+        if not words:
+            return False
+        last_word = words[-1].strip(",.!?;:")
+        return any(self._fuzzy_word_match(last_word, sw, threshold) for sw in suffix_words)
+
+    def _fuzzy_startswith(self, search_text: str, prefix: str, threshold: int = 80) -> bool:
+        """Check if search_text starts with a prefix phrase (fuzzy per-word matching)."""
+        text_words = [w.strip(",.!?;:") for w in search_text.split()]
+        prefix_words = prefix.strip().split()
+        if len(text_words) < len(prefix_words):
+            return False
+        return all(self._fuzzy_word_match(text_words[j], prefix_words[j], threshold) for j in range(len(prefix_words)))
+
     def _build_query_filter(self, search_text: str) -> Filter | None:
         """
         Build Qdrant payload filter from structured query elements.
@@ -418,14 +472,20 @@ class FreeTextQueryHandler:
         must_not_conditions: list[Condition] = []
 
         # IBA filter (check non-IBA first since "non-iba" contains "iba")
-        if any(term in search_text for term in ["non-iba", "non iba", "modern cocktail", "contemporary"]):
+        if any(
+            self._fuzzy_keyword_in_text(search_text, term)
+            for term in ["non-iba", "non iba", "modern cocktail", "contemporary"]
+        ):
             must_conditions.append(FieldCondition(key="metadata.is_iba", match=MatchValue(value=False)))
-        elif any(term in search_text for term in ["iba ", "iba cocktail", "official cocktail", "classic iba"]):
+        elif any(
+            self._fuzzy_keyword_in_text(search_text, term)
+            for term in ["iba", "iba cocktail", "official cocktail", "classic iba"]
+        ):
             must_conditions.append(FieldCondition(key="metadata.is_iba", match=MatchValue(value=True)))
 
         # Glassware filter
         for term, glassware_value in self._GLASSWARE_MAPPING.items():
-            if term in search_text:
+            if self._fuzzy_keyword_in_text(search_text, term):
                 must_conditions.append(
                     FieldCondition(key="metadata.glassware_values", match=MatchValue(value=glassware_value))
                 )
@@ -438,15 +498,19 @@ class FreeTextQueryHandler:
             must_conditions.append(
                 FieldCondition(key="metadata.ingredient_count", range=Range(gte=target_count, lte=target_count))
             )
-        elif any(term in search_text for term in ["simple", "easy", "few ingredients", "basic"]):
+        elif any(
+            self._fuzzy_keyword_in_text(search_text, term) for term in ["simple", "easy", "few ingredients", "basic"]
+        ):
             must_conditions.append(FieldCondition(key="metadata.ingredient_count", range=Range(lte=4)))
-        elif any(term in search_text for term in ["complex", "many ingredients", "elaborate"]):
+        elif any(
+            self._fuzzy_keyword_in_text(search_text, term) for term in ["complex", "many ingredients", "elaborate"]
+        ):
             must_conditions.append(FieldCondition(key="metadata.ingredient_count", range=Range(gte=6)))
 
         # Prep time filters
-        if any(term in search_text for term in ["quick", "fast", "5 minute", "5-minute"]):
+        if any(self._fuzzy_keyword_in_text(search_text, term) for term in ["quick", "fast", "5 minute", "5-minute"]):
             must_conditions.append(FieldCondition(key="metadata.prep_time_minutes", range=Range(lte=5)))
-        elif any(term in search_text for term in ["10 minute", "10-minute"]):
+        elif any(self._fuzzy_keyword_in_text(search_text, term) for term in ["10 minute", "10-minute"]):
             must_conditions.append(FieldCondition(key="metadata.prep_time_minutes", range=Range(lte=10)))
 
         # Serves filter
@@ -457,7 +521,7 @@ class FreeTextQueryHandler:
 
         # Base spirit filter
         for term, spirit_value in self._BASE_SPIRIT_MAPPING.items():
-            if re.search(r"\b" + re.escape(term) + r"\b", search_text):
+            if self._fuzzy_keyword_in_text(search_text, term):
                 must_conditions.append(
                     FieldCondition(key="metadata.keywords_base_spirit", match=MatchValue(value=spirit_value))
                 )
@@ -465,7 +529,7 @@ class FreeTextQueryHandler:
 
         # Flavor profile filter
         matched_flavors = [
-            flavor for flavor in self._FLAVOR_PROFILE_KEYWORDS if re.search(r"\b" + flavor + r"\b", search_text)
+            flavor for flavor in self._FLAVOR_PROFILE_KEYWORDS if self._fuzzy_keyword_in_text(search_text, flavor)
         ]
         for flavor in matched_flavors[:2]:  # Limit to 2 flavor filters to avoid over-constraining
             must_conditions.append(
@@ -474,7 +538,7 @@ class FreeTextQueryHandler:
 
         # Cocktail family filter
         for family in self._COCKTAIL_FAMILY_KEYWORDS:
-            if re.search(r"\b" + family + r"\b", search_text):
+            if self._fuzzy_keyword_in_text(search_text, family):
                 must_conditions.append(
                     FieldCondition(key="metadata.keywords_cocktail_family", match=MatchValue(value=family))
                 )
@@ -482,7 +546,7 @@ class FreeTextQueryHandler:
 
         # Technique filter
         for term, technique_value in self._TECHNIQUE_MAPPING.items():
-            if re.search(r"\b" + re.escape(term) + r"\b", search_text):
+            if self._fuzzy_keyword_in_text(search_text, term):
                 must_conditions.append(
                     FieldCondition(key="metadata.keywords_technique", match=MatchValue(value=technique_value))
                 )
@@ -490,7 +554,7 @@ class FreeTextQueryHandler:
 
         # Strength filter
         for term, strength_value in self._STRENGTH_KEYWORDS.items():
-            if term in search_text:
+            if self._fuzzy_keyword_in_text(search_text, term):
                 must_conditions.append(
                     FieldCondition(key="metadata.keywords_strength", match=MatchValue(value=strength_value))
                 )
@@ -498,14 +562,16 @@ class FreeTextQueryHandler:
 
         # Temperature filter
         for term, temp_value in self._TEMPERATURE_KEYWORDS.items():
-            if re.search(r"\b" + re.escape(term) + r"\b", search_text):
+            if self._fuzzy_keyword_in_text(search_text, term):
                 must_conditions.append(
                     FieldCondition(key="metadata.keywords_temperature", match=MatchValue(value=temp_value))
                 )
                 break
 
         # Season filter
-        matched_seasons = [season for season in self._SEASON_KEYWORDS if re.search(r"\b" + season + r"\b", search_text)]
+        matched_seasons = [
+            season for season in self._SEASON_KEYWORDS if self._fuzzy_keyword_in_text(search_text, season)
+        ]
         if matched_seasons:
             # Map "autumn" to "fall" for consistency
             normalized_seasons = ["fall" if s == "autumn" else s for s in matched_seasons]
@@ -518,14 +584,14 @@ class FreeTextQueryHandler:
 
         # Occasion filter
         for occasion in self._OCCASION_KEYWORDS:
-            if occasion in search_text:
+            if self._fuzzy_keyword_in_text(search_text, occasion):
                 must_conditions.append(
                     FieldCondition(key="metadata.keywords_occasion", match=MatchValue(value=occasion))
                 )
                 break
 
         # Mood filter
-        matched_moods = [mood for mood in self._MOOD_KEYWORDS if re.search(r"\b" + mood + r"\b", search_text)]
+        matched_moods = [mood for mood in self._MOOD_KEYWORDS if self._fuzzy_keyword_in_text(search_text, mood)]
         for mood in matched_moods[:2]:  # Limit to 2 mood filters
             must_conditions.append(FieldCondition(key="metadata.keywords_mood", match=MatchValue(value=mood)))
 
@@ -552,6 +618,7 @@ class FreeTextQueryHandler:
         Handles multi-word ingredients like "blue curacao", "orange juice", "lime juice".
         Each word of the multi-word phrase is added individually to match against
         the ingredient_words field which stores split words.
+        Uses fuzzy matching for pattern detection to handle misspellings.
         """
         # Stop words that signal the end of an exclusion phrase
         _STOP_WORDS = {
@@ -575,31 +642,43 @@ class FreeTextQueryHandler:
             "from",
         }
 
+        # Pre-compute first words of exclusion patterns for stop detection
+        _EXCLUSION_FIRST_WORDS = [p.strip().split()[0] for p in self._EXCLUSION_PATTERNS]
+
         terms: list[str] = []
+        text_words = search_text.split()
+
         for pattern in self._EXCLUSION_PATTERNS:
-            idx = search_text.find(pattern)
-            while idx >= 0:
-                after = search_text[idx + len(pattern) :].split()
-                # Collect words until we hit a stop word, another exclusion pattern, or punctuation
-                phrase_words: list[str] = []
-                for word in after:
-                    cleaned = word.strip(",.!?").lower()
-                    if cleaned in _STOP_WORDS or len(cleaned) < 2:
-                        break
-                    # Check if this word starts another exclusion pattern
-                    if any(cleaned == exc_pattern.strip() for exc_pattern in self._EXCLUSION_PATTERNS):
-                        break
-                    phrase_words.append(cleaned)
-                    # Limit to 3-word phrases to avoid runaway matching
-                    if len(phrase_words) >= 3:
-                        break
+            pattern_words = pattern.strip().split()
+            pat_len = len(pattern_words)
 
-                # Add each word individually for matching against ingredient_words
-                for word in phrase_words:
-                    if word not in terms:
-                        terms.append(word)
+            i = 0
+            while i <= len(text_words) - pat_len:
+                if all(self._fuzzy_word_match(text_words[i + j], pattern_words[j]) for j in range(pat_len)):
+                    # Pattern matched at word index i; extract words after it
+                    after_start = i + pat_len
+                    phrase_words: list[str] = []
+                    for k in range(after_start, len(text_words)):
+                        cleaned = text_words[k].strip(",.!?").lower()
+                        if cleaned in _STOP_WORDS or len(cleaned) < 2:
+                            break
+                        # Check if this word starts another exclusion pattern
+                        if any(self._fuzzy_word_match(cleaned, fw) for fw in _EXCLUSION_FIRST_WORDS):
+                            break
+                        phrase_words.append(cleaned)
+                        # Limit to 3-word phrases to avoid runaway matching
+                        if len(phrase_words) >= 3:
+                            break
 
-                idx = search_text.find(pattern, idx + len(pattern))
+                    # Add each word individually for matching against ingredient_words
+                    for word in phrase_words:
+                        if word not in terms:
+                            terms.append(word)
+
+                    i = after_start + max(len(phrase_words), 1)
+                else:
+                    i += 1
+
         return terms
 
     def _extract_inclusion_terms(self, search_text: str) -> list[str]:
@@ -608,6 +687,7 @@ class FreeTextQueryHandler:
         Handles patterns like "with honey", "using lime juice", "made with bourbon".
         Each word of a multi-word phrase is added individually to match against
         the ingredient_words field which stores split words.
+        Uses fuzzy matching for pattern detection to handle misspellings.
 
         Skips terms that are also detected as keyword metadata filters (base spirits,
         glassware, etc.) to avoid double-filtering.
@@ -635,31 +715,42 @@ class FreeTextQueryHandler:
             "from",
         }
 
+        # Pre-compute first words of exclusion patterns for stop detection
+        _EXCLUSION_FIRST_WORDS = [p.strip().split()[0] for p in self._EXCLUSION_PATTERNS]
+
         terms: list[str] = []
         excluded_terms = set(self._extract_exclusion_terms(search_text))
+        text_words = search_text.split()
 
         for pattern in self._INCLUSION_PATTERNS:
-            idx = search_text.find(pattern)
-            while idx >= 0:
-                after = search_text[idx + len(pattern) :].split()
-                # Collect words until we hit a stop word, another pattern, or punctuation
-                phrase_words: list[str] = []
-                for word in after:
-                    cleaned = word.strip(",.!?").lower()
-                    if cleaned in _STOP_WORDS or len(cleaned) < 2:
-                        break
-                    # Check if this word starts an exclusion pattern
-                    if any(cleaned == exc_pattern.strip() for exc_pattern in self._EXCLUSION_PATTERNS):
-                        break
-                    phrase_words.append(cleaned)
-                    # Limit to 3-word phrases to avoid runaway matching
-                    if len(phrase_words) >= 3:
-                        break
+            pattern_words = pattern.strip().split()
+            pat_len = len(pattern_words)
 
-                # Add each word individually for matching against ingredient_words
-                for word in phrase_words:
-                    if word not in terms and word not in excluded_terms:
-                        terms.append(word)
+            i = 0
+            while i <= len(text_words) - pat_len:
+                if all(self._fuzzy_word_match(text_words[i + j], pattern_words[j]) for j in range(pat_len)):
+                    # Pattern matched at word index i; extract words after it
+                    after_start = i + pat_len
+                    phrase_words: list[str] = []
+                    for k in range(after_start, len(text_words)):
+                        cleaned = text_words[k].strip(",.!?").lower()
+                        if cleaned in _STOP_WORDS or len(cleaned) < 2:
+                            break
+                        # Check if this word starts an exclusion pattern
+                        if any(self._fuzzy_word_match(cleaned, fw) for fw in _EXCLUSION_FIRST_WORDS):
+                            break
+                        phrase_words.append(cleaned)
+                        # Limit to 3-word phrases to avoid runaway matching
+                        if len(phrase_words) >= 3:
+                            break
 
-                idx = search_text.find(pattern, idx + len(pattern))
+                    # Add each word individually for matching against ingredient_words
+                    for word in phrase_words:
+                        if word not in terms and word not in excluded_terms:
+                            terms.append(word)
+
+                    i = after_start + max(len(phrase_words), 1)
+                else:
+                    i += 1
+
         return terms

@@ -824,6 +824,40 @@ class TestFuzzyNameMatch:
         assert len(result) == 1
         assert result[0].title == "Margarita"
 
+    def test_exact_name_match_skips_descriptive_plural_suffix(self):
+        """Test that queries ending with 'cocktails' skip name matching (descriptive query)."""
+        handler = self._make_handler()
+        cocktails = [
+            create_test_cocktail_model("1", "Champagne Cocktail"),
+            create_test_cocktail_model("2", "Gin Fizz"),
+        ]
+        # "gin cocktails" is a descriptive query, not a cocktail name lookup
+        result = handler._find_exact_name_match("gin cocktails", cocktails)
+        assert result is None
+
+    def test_exact_name_match_skips_drinks_suffix(self):
+        """Test that queries ending with 'drinks' skip name matching."""
+        handler = self._make_handler()
+        cocktails = [create_test_cocktail_model("1", "Vodka Drinks")]
+        result = handler._find_exact_name_match("vodka drinks", cocktails)
+        assert result is None
+
+    def test_exact_name_match_strips_singular_cocktail_suffix(self):
+        """Test that 'margarita cocktail' is normalized by removing singular suffix."""
+        handler = self._make_handler()
+        cocktails = [create_test_cocktail_model("1", "Margarita")]
+        result = handler._find_exact_name_match("margarita cocktail", cocktails)
+        assert result is not None
+        assert result[0].title == "Margarita"
+
+    def test_exact_name_match_does_not_skip_singular_cocktail_suffix(self):
+        """Test that 'champagne cocktail' (singular) still matches the actual cocktail name."""
+        handler = self._make_handler()
+        cocktails = [create_test_cocktail_model("1", "Champagne Cocktail")]
+        result = handler._find_exact_name_match("champagne cocktail", cocktails)
+        assert result is not None
+        assert result[0].title == "Champagne Cocktail"
+
 
 class TestKeywordMetadataFilters:
     """Test cases for keyword metadata filters in _build_query_filter."""
@@ -989,3 +1023,286 @@ class TestKeywordMetadataFilters:
         assert "metadata.keywords_base_spirit" in must_keys
         assert "metadata.keywords_season" in must_keys
         assert "metadata.keywords_mood" in must_keys
+
+
+class TestFuzzyWordMatch:
+    """Test cases for _fuzzy_word_match helper."""
+
+    def _make_handler(self):
+        mock_repository = AsyncMock()
+        mock_qdrant_options = MagicMock()
+        mock_reranker = AsyncMock()
+        mock_reranker.rerank = AsyncMock(side_effect=lambda query, cocktails, top_k=10: cocktails)
+        return FreeTextQueryHandler(
+            cocktail_vector_repository=mock_repository,
+            qdrant_opotions=mock_qdrant_options,
+            reranker_service=mock_reranker,
+        )
+
+    def test_exact_match_short_word(self):
+        """Short words (<5 chars) require exact match."""
+        handler = self._make_handler()
+        assert handler._fuzzy_word_match("gin", "gin") is True
+        assert handler._fuzzy_word_match("rum", "rum") is True
+
+    def test_short_word_rejects_misspelling(self):
+        """Short words don't fuzzy match to avoid false positives."""
+        handler = self._make_handler()
+        assert handler._fuzzy_word_match("gn", "gin") is False
+        assert handler._fuzzy_word_match("rmu", "rum") is False
+        assert handler._fuzzy_word_match("rye", "rum") is False
+
+    def test_fuzzy_match_long_word(self):
+        """Longer words (>=5 chars) support fuzzy matching."""
+        handler = self._make_handler()
+        assert handler._fuzzy_word_match("bourbn", "bourbon") is True
+        assert handler._fuzzy_word_match("whisky", "whiskey") is True
+        assert handler._fuzzy_word_match("shakn", "shaken") is True
+
+    def test_fuzzy_match_rejects_dissimilar_long_word(self):
+        """Longer words still reject completely different strings."""
+        handler = self._make_handler()
+        assert handler._fuzzy_word_match("vodka", "whiskey") is False
+        assert handler._fuzzy_word_match("frozen", "shaken") is False
+
+
+class TestFuzzyKeywordInText:
+    """Test cases for _fuzzy_keyword_in_text helper."""
+
+    def _make_handler(self):
+        mock_repository = AsyncMock()
+        mock_qdrant_options = MagicMock()
+        mock_reranker = AsyncMock()
+        mock_reranker.rerank = AsyncMock(side_effect=lambda query, cocktails, top_k=10: cocktails)
+        return FreeTextQueryHandler(
+            cocktail_vector_repository=mock_repository,
+            qdrant_opotions=mock_qdrant_options,
+            reranker_service=mock_reranker,
+        )
+
+    def test_exact_keyword_found(self):
+        handler = self._make_handler()
+        assert handler._fuzzy_keyword_in_text("refreshing gin cocktails", "refreshing") is True
+
+    def test_misspelled_keyword_found(self):
+        handler = self._make_handler()
+        assert handler._fuzzy_keyword_in_text("refrashing gin cocktails", "refreshing") is True
+
+    def test_multi_word_keyword_found(self):
+        handler = self._make_handler()
+        assert handler._fuzzy_keyword_in_text("show me top rated cocktails", "top rated") is True
+
+    def test_misspelled_multi_word_keyword_found(self):
+        handler = self._make_handler()
+        assert handler._fuzzy_keyword_in_text("show me highst rated cocktails", "highest rated") is True
+
+    def test_keyword_not_found(self):
+        handler = self._make_handler()
+        assert handler._fuzzy_keyword_in_text("gin cocktails", "vodka") is False
+
+    def test_short_keyword_requires_exact(self):
+        handler = self._make_handler()
+        assert handler._fuzzy_keyword_in_text("gin cocktails", "gin") is True
+        assert handler._fuzzy_keyword_in_text("gn cocktails", "gin") is False
+
+    def test_word_boundary_matching(self):
+        """Fuzzy keyword matching uses word boundaries, not substring matching."""
+        handler = self._make_handler()
+        # "iba" should NOT match within "non-iba"
+        assert handler._fuzzy_keyword_in_text("non-iba cocktails", "iba") is False
+        # But standalone "iba" should match
+        assert handler._fuzzy_keyword_in_text("iba cocktails", "iba") is True
+
+
+class TestFuzzyFilterMisspellings:
+    """Test cases for misspelling tolerance in _build_query_filter."""
+
+    def _make_handler(self):
+        mock_repository = AsyncMock()
+        mock_qdrant_options = MagicMock()
+        mock_reranker = AsyncMock()
+        mock_reranker.rerank = AsyncMock(side_effect=lambda query, cocktails, top_k=10: cocktails)
+        return FreeTextQueryHandler(
+            cocktail_vector_repository=mock_repository,
+            qdrant_opotions=mock_qdrant_options,
+            reranker_service=mock_reranker,
+        )
+
+    def test_misspelled_bourbon_triggers_spirit_filter(self):
+        """Test that 'bourbn' fuzzy-matches 'bourbon' in base spirit filter."""
+        handler = self._make_handler()
+        result = handler._build_query_filter("bourbn cocktails")
+        assert result is not None
+        spirit_condition = next(
+            (c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_base_spirit"),
+            None,
+        )
+        assert spirit_condition is not None
+        assert isinstance(spirit_condition.match, MatchValue)
+        assert spirit_condition.match.value == "bourbon"
+
+    def test_misspelled_shaken_triggers_technique_filter(self):
+        """Test that 'shakn' fuzzy-matches 'shaken' in technique filter."""
+        handler = self._make_handler()
+        result = handler._build_query_filter("shakn cocktails")
+        assert result is not None
+        technique_condition = next(
+            (c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_technique"),
+            None,
+        )
+        assert technique_condition is not None
+        assert isinstance(technique_condition.match, MatchValue)
+        assert technique_condition.match.value == "shaken"
+
+    def test_misspelled_refreshing_triggers_mood_filter(self):
+        """Test that 'refrashing' fuzzy-matches 'refreshing' in mood filter."""
+        handler = self._make_handler()
+        result = handler._build_query_filter("refrashing cocktails")
+        assert result is not None
+        mood_condition = next(
+            (c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_mood"),
+            None,
+        )
+        assert mood_condition is not None
+        assert isinstance(mood_condition.match, MatchValue)
+        assert mood_condition.match.value == "refreshing"
+
+    def test_misspelled_contemporary_triggers_non_iba(self):
+        """Test that 'contemparary' fuzzy-matches 'contemporary' for non-IBA filter."""
+        handler = self._make_handler()
+        result = handler._build_query_filter("contemparary cocktails")
+        assert result is not None
+        iba_condition = next(
+            (c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.is_iba"),
+            None,
+        )
+        assert iba_condition is not None
+        assert isinstance(iba_condition.match, MatchValue)
+        assert iba_condition.match.value is False
+
+    def test_misspelled_simple_triggers_ingredient_count(self):
+        """Test that 'simle' fuzzy-matches 'simple' for ingredient count filter."""
+        handler = self._make_handler()
+        result = handler._build_query_filter("simle cocktails")
+        assert result is not None
+        count_condition = next(
+            (c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.ingredient_count"),
+            None,
+        )
+        assert count_condition is not None
+        assert count_condition.range is not None
+        assert count_condition.range.lte == 4
+
+    def test_misspelled_frozen_triggers_temperature(self):
+        """Test that 'frozn' fuzzy-matches 'frozen' for temperature filter."""
+        handler = self._make_handler()
+        result = handler._build_query_filter("frozn cocktails")
+        assert result is not None
+        temp_condition = next(
+            (c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_temperature"),
+            None,
+        )
+        assert temp_condition is not None
+        assert isinstance(temp_condition.match, MatchValue)
+        assert temp_condition.match.value == "frozen"
+
+    def test_misspelled_summer_triggers_season(self):
+        """Test that 'sumer' fuzzy-matches 'summer' for season filter."""
+        handler = self._make_handler()
+        result = handler._build_query_filter("sumer cocktails")
+        assert result is not None
+        season_condition = next(
+            (c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_season"),
+            None,
+        )
+        assert season_condition is not None
+        assert isinstance(season_condition.match, MatchAny)
+        assert "summer" in season_condition.match.any
+
+    def test_short_keyword_gin_not_fuzzy_matched(self):
+        """Test that short keywords like 'gin' (3 chars) are NOT fuzzy matched — exact only."""
+        handler = self._make_handler()
+        result = handler._build_query_filter("gn cocktails")
+        # "gn" should NOT fuzzy-match "gin" since gin < 5 chars
+        if result is not None and result.must:
+            spirit_conditions = [
+                c for c in result.must if isinstance(c, FieldCondition) and c.key == "metadata.keywords_base_spirit"
+            ]
+            assert len(spirit_conditions) == 0
+
+
+class TestFuzzyExtractionMisspellings:
+    """Test cases for misspelling tolerance in extraction methods."""
+
+    def _make_handler(self):
+        mock_repository = AsyncMock()
+        mock_qdrant_options = MagicMock()
+        mock_reranker = AsyncMock()
+        mock_reranker.rerank = AsyncMock(side_effect=lambda query, cocktails, top_k=10: cocktails)
+        return FreeTextQueryHandler(
+            cocktail_vector_repository=mock_repository,
+            qdrant_opotions=mock_qdrant_options,
+            reranker_service=mock_reranker,
+        )
+
+    def test_misspelled_without_extracts_exclusion(self):
+        """Test that 'witout' fuzzy-matches 'without' in exclusion pattern."""
+        handler = self._make_handler()
+        terms = handler._extract_exclusion_terms("cocktails witout honey")
+        assert "honey" in terms
+
+    def test_misspelled_excluding_extracts_exclusion(self):
+        """Test that 'exluding' fuzzy-matches 'excluding' in exclusion pattern."""
+        handler = self._make_handler()
+        terms = handler._extract_exclusion_terms("cocktails exluding honey")
+        assert "honey" in terms
+
+    def test_misspelled_containing_extracts_inclusion(self):
+        """Test that 'contaning' fuzzy-matches 'containing' in inclusion pattern."""
+        handler = self._make_handler()
+        terms = handler._extract_inclusion_terms("cocktails contaning ginger")
+        assert "ginger" in terms
+
+    def test_misspelled_featuring_extracts_inclusion(self):
+        """Test that 'feturing' fuzzy-matches 'featuring' in inclusion pattern."""
+        handler = self._make_handler()
+        terms = handler._extract_inclusion_terms("cocktails feturing honey")
+        assert "honey" in terms
+
+
+class TestFuzzySuffixStripping:
+    """Test cases for fuzzy suffix stripping in _find_exact_name_match."""
+
+    def _make_handler(self):
+        mock_repository = AsyncMock()
+        mock_qdrant_options = MagicMock()
+        mock_reranker = AsyncMock()
+        mock_reranker.rerank = AsyncMock(side_effect=lambda query, cocktails, top_k=10: cocktails)
+        return FreeTextQueryHandler(
+            cocktail_vector_repository=mock_repository,
+            qdrant_opotions=mock_qdrant_options,
+            reranker_service=mock_reranker,
+        )
+
+    def test_misspelled_cocktail_suffix_stripped(self):
+        """Test that 'margarita coctail' strips the misspelled suffix and matches."""
+        handler = self._make_handler()
+        cocktails = [create_test_cocktail_model("1", "Margarita")]
+        result = handler._find_exact_name_match("margarita coctail", cocktails)
+        assert result is not None
+        assert result[0].title == "Margarita"
+
+    def test_misspelled_recipe_suffix_stripped(self):
+        """Test that 'margarita reciepe' strips the misspelled suffix and matches."""
+        handler = self._make_handler()
+        cocktails = [create_test_cocktail_model("1", "Margarita")]
+        result = handler._find_exact_name_match("margarita reciepe", cocktails)
+        assert result is not None
+        assert result[0].title == "Margarita"
+
+    def test_misspelled_prefix_skips_name_match(self):
+        """Test that 'coctails with' fuzzy-matches 'cocktails' prefix and skips name matching."""
+        handler = self._make_handler()
+        cocktails = [create_test_cocktail_model("1", "Margarita")]
+        result = handler._find_exact_name_match("coctails with gin", cocktails)
+        assert result is None
