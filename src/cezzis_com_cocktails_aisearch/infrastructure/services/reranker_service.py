@@ -64,6 +64,12 @@ class RerankerService(IRerankerService):
         # Sort by reranker score descending
         scored_cocktails.sort(key=lambda x: x[1], reverse=True)
 
+        # Apply relative score cutoff: drop results below a fraction of the top score
+        if scored_cocktails and self.options.relative_score_cutoff > 0.0:
+            top_score = scored_cocktails[0][1]
+            cutoff = top_score * self.options.relative_score_cutoff
+            scored_cocktails = [(c, s) for c, s in scored_cocktails if s >= cutoff]
+
         # Apply top_k limit
         result = [c for c, _ in scored_cocktails[:top_k]]
 

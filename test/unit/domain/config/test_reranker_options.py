@@ -21,6 +21,7 @@ class TestRerankerOptions:
             assert options.endpoint == ""
             assert options.api_key == ""
             assert options.score_threshold == 0.0
+            assert options.relative_score_cutoff == 0.0
 
     def test_reranker_options_init_with_env_vars(self):
         """Test RerankerOptions initialization with environment variables."""
@@ -30,6 +31,7 @@ class TestRerankerOptions:
                 "RERANKER_ENDPOINT": "http://localhost:8990",
                 "RERANKER_API_KEY": "test-api-key-123",
                 "RERANKER_SCORE_THRESHOLD": "0.5",
+                "RERANKER_RELATIVE_SCORE_CUTOFF": "0.05",
             },
         ):
             options = RerankerOptions()
@@ -37,6 +39,7 @@ class TestRerankerOptions:
             assert options.endpoint == "http://localhost:8990"
             assert options.api_key == "test-api-key-123"
             assert options.score_threshold == 0.5
+            assert options.relative_score_cutoff == 0.05
 
     def test_get_reranker_options_raises_on_missing_endpoint(self):
         """Test that get_reranker_options raises ValueError when endpoint is missing."""
@@ -93,3 +96,17 @@ class TestRerankerOptions:
             options2 = get_reranker_options()
             assert options2.endpoint == "http://second-endpoint"
             assert options1 is not options2
+
+    def test_get_reranker_options_raises_on_invalid_relative_cutoff(self):
+        """Test that get_reranker_options raises ValueError for out-of-range relative cutoff."""
+        clear_reranker_options_cache()
+
+        with patch.dict(
+            os.environ,
+            {
+                "RERANKER_ENDPOINT": "http://localhost:8990",
+                "RERANKER_RELATIVE_SCORE_CUTOFF": "1.5",
+            },
+        ):
+            with pytest.raises(ValueError, match="RERANKER_RELATIVE_SCORE_CUTOFF"):
+                get_reranker_options()

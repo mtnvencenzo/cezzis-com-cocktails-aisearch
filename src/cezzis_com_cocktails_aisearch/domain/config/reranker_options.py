@@ -13,6 +13,7 @@ class RerankerOptions(BaseSettings):
     endpoint: str = Field(default="", validation_alias="RERANKER_ENDPOINT")
     api_key: str = Field(default="", validation_alias="RERANKER_API_KEY")
     score_threshold: float = Field(default=0.0, validation_alias="RERANKER_SCORE_THRESHOLD")
+    relative_score_cutoff: float = Field(default=0.0, validation_alias="RERANKER_RELATIVE_SCORE_CUTOFF")
 
 
 _logger: logging.Logger = logging.getLogger("reranker_options")
@@ -32,6 +33,8 @@ def get_reranker_options() -> RerankerOptions:
 
         if not _reranker_options.endpoint:
             raise ValueError("RERANKER_ENDPOINT environment variable is required")
+        if _reranker_options.relative_score_cutoff < 0.0 or _reranker_options.relative_score_cutoff > 1.0:
+            raise ValueError("RERANKER_RELATIVE_SCORE_CUTOFF must be between 0.0 and 1.0")
 
         _logger.info(
             "Reranker options loaded successfully.",

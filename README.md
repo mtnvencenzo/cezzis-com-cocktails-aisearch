@@ -287,7 +287,8 @@ Each cocktail is broken into multiple **description chunks** (e.g., overview, in
 | `HUGGINGFACE_API_TOKEN` | API token for TEI authentication |
 | `RERANKER_ENDPOINT` | Cross-encoder reranker TEI endpoint (e.g., `http://localhost:8990`) |
 | `RERANKER_API_KEY` | API key for reranker TEI |
-| `RERANKER_SCORE_THRESHOLD` | Minimum cross-encoder score to retain a result |
+| `RERANKER_SCORE_THRESHOLD` | Minimum absolute cross-encoder score to retain a result |
+| `RERANKER_RELATIVE_SCORE_CUTOFF` | Drop results below this fraction of the top reranker score (0.0-1.0) |
 | `SPLADE_ENDPOINT` | SPLADE sparse encoder TEI endpoint (e.g., `http://localhost:8991`) |
 | `SPLADE_API_KEY` | API key for SPLADE TEI |
 

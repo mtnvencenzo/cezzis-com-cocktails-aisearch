@@ -41,11 +41,14 @@ def _make_ingredient(name: str) -> CocktailSearchIngredientModel:
 class TestRerankerService:
     """Test cases for RerankerService."""
 
-    def _make_options(self, endpoint="http://localhost:8990", api_key="", score_threshold=0.0):
+    def _make_options(
+        self, endpoint="http://localhost:8990", api_key="", score_threshold=0.0, relative_score_cutoff=0.0
+    ):
         options = MagicMock()
         options.endpoint = endpoint
         options.api_key = api_key
         options.score_threshold = score_threshold
+        options.relative_score_cutoff = relative_score_cutoff
         return options
 
     @pytest.mark.anyio
@@ -282,6 +285,120 @@ class TestRerankerService:
             result = await service.rerank(query="tequila", cocktails=cocktails)
 
         assert result == cocktails
+
+    @pytest.mark.anyio
+    async def test_rerank_applies_relative_score_cutoff(self):
+        """Test that relative score cutoff drops results below a fraction of the top score."""
+        options = self._make_options(endpoint="http://localhost:8990", relative_score_cutoff=0.05)
+        service = RerankerService(reranker_options=options)
+
+        cocktails = [
+            create_test_cocktail_model("1", "Michelada"),
+            create_test_cocktail_model("2", "Margarita"),
+            create_test_cocktail_model("3", "Bamboo"),
+            create_test_cocktail_model("4", "Aviation"),
+        ]
+
+        # Top score=0.80, cutoff=0.80*0.05=0.04
+        # Michelada 0.80 >= 0.04 -> keep
+        # Margarita 0.054 >= 0.04 -> keep
+        # Bamboo 0.036 < 0.04 -> drop
+        # Aviation 0.014 < 0.04 -> drop
+        mock_response = MagicMock()
+        mock_response.json.return_value = [
+            {"index": 0, "score": 0.80},
+            {"index": 1, "score": 0.054},
+            {"index": 2, "score": 0.036},
+            {"index": 3, "score": 0.014},
+        ]
+        mock_response.raise_for_status = MagicMock()
+
+        with patch(
+            "cezzis_com_cocktails_aisearch.infrastructure.services.reranker_service.httpx.AsyncClient"
+        ) as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            result = await service.rerank(query="cocktails with salt", cocktails=cocktails)
+
+        assert len(result) == 2
+        assert result[0].title == "Michelada"
+        assert result[1].title == "Margarita"
+
+    @pytest.mark.anyio
+    async def test_rerank_relative_cutoff_zero_disables(self):
+        """Test that relative_score_cutoff=0.0 does not filter any results."""
+        options = self._make_options(endpoint="http://localhost:8990", relative_score_cutoff=0.0)
+        service = RerankerService(reranker_options=options)
+
+        cocktails = [
+            create_test_cocktail_model("1", "High"),
+            create_test_cocktail_model("2", "Low"),
+        ]
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = [
+            {"index": 0, "score": 0.90},
+            {"index": 1, "score": 0.001},
+        ]
+        mock_response.raise_for_status = MagicMock()
+
+        with patch(
+            "cezzis_com_cocktails_aisearch.infrastructure.services.reranker_service.httpx.AsyncClient"
+        ) as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            result = await service.rerank(query="test", cocktails=cocktails)
+
+        assert len(result) == 2
+
+    @pytest.mark.anyio
+    async def test_rerank_relative_cutoff_combined_with_absolute_threshold(self):
+        """Test that both absolute threshold and relative cutoff are applied."""
+        options = self._make_options(
+            endpoint="http://localhost:8990",
+            score_threshold=0.03,
+            relative_score_cutoff=0.1,
+        )
+        service = RerankerService(reranker_options=options)
+
+        cocktails = [
+            create_test_cocktail_model("1", "Top"),
+            create_test_cocktail_model("2", "Mid"),
+            create_test_cocktail_model("3", "Low"),
+        ]
+
+        # Score threshold=0.03 filters out Low (0.02)
+        # Relative cutoff=0.1 of top (0.80)=0.08, filters out Mid (0.05)
+        # Only Top survives both
+        mock_response = MagicMock()
+        mock_response.json.return_value = [
+            {"index": 0, "score": 0.80},
+            {"index": 1, "score": 0.05},
+            {"index": 2, "score": 0.02},
+        ]
+        mock_response.raise_for_status = MagicMock()
+
+        with patch(
+            "cezzis_com_cocktails_aisearch.infrastructure.services.reranker_service.httpx.AsyncClient"
+        ) as mock_client_cls:
+            mock_client = AsyncMock()
+            mock_client.post = AsyncMock(return_value=mock_response)
+            mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+            mock_client.__aexit__ = AsyncMock(return_value=False)
+            mock_client_cls.return_value = mock_client
+
+            result = await service.rerank(query="test", cocktails=cocktails)
+
+        assert len(result) == 1
+        assert result[0].title == "Top"
 
 
 class TestBuildDocumentText:
