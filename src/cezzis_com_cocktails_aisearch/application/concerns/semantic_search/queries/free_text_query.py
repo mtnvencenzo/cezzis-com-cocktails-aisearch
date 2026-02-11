@@ -222,6 +222,11 @@ class FreeTextQueryHandler:
         "romantic",
     ]
 
+    # Words that are generic descriptors and should be stripped from vector search queries.
+    # These add no semantic value for embeddings and cause false matches with cocktails
+    # that have these words in their actual name (e.g., "Millionaire Cocktail").
+    _GENERIC_DESCRIPTOR_WORDS: set[str] = {"cocktail", "cocktails", "drink", "drinks", "recipe", "recipes"}
+
     @inject
     def __init__(
         self,
@@ -254,9 +259,15 @@ class FreeTextQueryHandler:
         # Build Qdrant payload filter from structured query elements
         query_filter = self._build_query_filter(search_text)
 
+        # Strip generic descriptor words ("cocktail", "cocktails", etc.) from the
+        # vector search query. These add no semantic value for embeddings and cause
+        # false similarity with cocktails that have these words in their name
+        # (e.g., "Millionaire Cocktail", "Champagne Cocktail").
+        vector_search_text = self._strip_generic_descriptors(command.free_text)
+
         # Semantic search with Qdrant-native filtering
         cocktails = await self.cocktail_vector_repository.search_vectors(
-            free_text=command.free_text,
+            free_text=vector_search_text,
             query_filter=query_filter,
         )
 
@@ -272,7 +283,7 @@ class FreeTextQueryHandler:
 
         # Cross-encoder reranking: refine relevance ordering using TEI /rerank
         sorted_cocktails = await self.reranker_service.rerank(
-            query=command.free_text,
+            query=vector_search_text,
             cocktails=sorted_cocktails,
             top_k=skip + take,
         )
@@ -406,6 +417,19 @@ class FreeTextQueryHandler:
                 if ingredient.name and search_text in ingredient.name.lower():
                     return True
         return False
+
+    @staticmethod
+    def _strip_generic_descriptors(text: str) -> str:
+        """Remove generic descriptor words ('cocktail', 'cocktails', 'drink', etc.) from search text.
+
+        These words add no semantic value for vector search and cause false matches
+        with cocktails that have these words in their actual name (e.g., 'Millionaire Cocktail').
+        Returns the cleaned text, or the original text if stripping would leave it empty.
+        """
+        words = text.split()
+        cleaned = [w for w in words if w.lower().strip(",.!?;:") not in FreeTextQueryHandler._GENERIC_DESCRIPTOR_WORDS]
+        result = " ".join(cleaned).strip()
+        return result if result else text
 
     # --- Fuzzy matching helpers for misspelling tolerance ---
 

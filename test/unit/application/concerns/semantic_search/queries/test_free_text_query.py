@@ -1179,3 +1179,52 @@ class TestFuzzySuffixStripping:
         cocktails = [create_test_cocktail_model("1", "Margarita")]
         result = handler._find_exact_name_match("coctails with gin", cocktails)
         assert result is None
+
+
+class TestStripGenericDescriptors:
+    """Test cases for _strip_generic_descriptors."""
+
+    def test_strips_cocktails_from_query(self):
+        """Test that 'Caribbean Cocktails' becomes 'Caribbean'."""
+        result = FreeTextQueryHandler._strip_generic_descriptors("Caribbean Cocktails")
+        assert result == "Caribbean"
+
+    def test_strips_cocktail_singular(self):
+        """Test that 'a refreshing cocktail' strips the word 'cocktail'."""
+        result = FreeTextQueryHandler._strip_generic_descriptors("a refreshing cocktail")
+        assert result == "a refreshing"
+
+    def test_strips_drinks(self):
+        """Test that 'summer drinks' becomes 'summer'."""
+        result = FreeTextQueryHandler._strip_generic_descriptors("summer drinks")
+        assert result == "summer"
+
+    def test_strips_recipe(self):
+        """Test that 'gin recipe' becomes 'gin'."""
+        result = FreeTextQueryHandler._strip_generic_descriptors("gin recipe")
+        assert result == "gin"
+
+    def test_strips_multiple_descriptors(self):
+        """Test that 'cocktail recipes with gin' strips both generic words."""
+        result = FreeTextQueryHandler._strip_generic_descriptors("cocktail recipes with gin")
+        assert result == "with gin"
+
+    def test_preserves_non_descriptor_text(self):
+        """Test that text without generic descriptors is unchanged."""
+        result = FreeTextQueryHandler._strip_generic_descriptors("refreshing gin sour")
+        assert result == "refreshing gin sour"
+
+    def test_returns_original_if_only_descriptors(self):
+        """Test that stripping all words returns the original text."""
+        result = FreeTextQueryHandler._strip_generic_descriptors("cocktails")
+        assert result == "cocktails"
+
+    def test_strips_with_punctuation(self):
+        """Test that descriptor words with trailing punctuation are stripped."""
+        result = FreeTextQueryHandler._strip_generic_descriptors("best cocktails, ever")
+        assert result == "best ever"
+
+    def test_case_insensitive(self):
+        """Test that stripping is case-insensitive."""
+        result = FreeTextQueryHandler._strip_generic_descriptors("Caribbean COCKTAILS")
+        assert result == "Caribbean"
