@@ -6,14 +6,16 @@ on:
     paths: [
       src/cezzis_com_cocktails_aisearch/**,
       test/**,
-      .github/workflows/cezzis-cocktails-aisearch-cicd.yaml
+      .github/workflows/cezzis-cocktails-aisearch-cicd.yaml,
+      .iac/terraform/**
     ]
   push:
     branches: [main]
     paths: [
       src/cezzis_com_cocktails_aisearch/**,
       test/**,
-      .github/workflows/cezzis-cocktails-aisearch-cicd.yaml
+      .github/workflows/cezzis-cocktails-aisearch-cicd.yaml,
+      .iac/terraform/**
     ]
 
   workflow_dispatch:
@@ -78,13 +80,35 @@ jobs:
       acr_registry_login_username: ${{ secrets.ACR_REGISTRY_USERNAME }}
       acr_registry_login_password: ${{ secrets.ACR_REGISTRY_PASSWORD }}
 
+  terraform_deploy_prd:
+    name: Terraform deploy prd
+    uses: mtnvencenzo/workflows/.github/workflows/terraform-plan-and-apply.yaml@main
+    needs: [docker, gitVersion]
+    with:
+      lint_only: false # if true, terraform plan and apply will not be ran
+      working_directory: .iac/terraform
+      environment_name: prd
+      allow_deploy: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref_name == 'main' }}
+      terraform_version: 1.11.4
+      arm_client_id: ${{ vars.ARM_CLIENT_ID }}
+      arm_subscription_id: ${{ vars.ARM_SUBSCRIPTION_ID }}
+      arm_tenant_id: ${{ vars.ARM_TENANT_ID }}
+      backend_resource_group_name: rg-vec-eus-administration-001
+      backend_storage_account_name: stveceusterraformstat001
+      backend_container_name: terraform-cocktails
+      backend_blob_key: cocktails/prd-cocktails-aisearch.tfstate
+      # command_line_args: '-var image_tag=${{ github.sha }}'
+    secrets:
+      arm_client_secret: ${{ secrets.ARM_CLIENT_SECRET }}
+      terraform_module_repo_access_key_secret: ${{ secrets.TERRAFORM_MODULE_REPO_ACCESS_KEY_SECRET }}
+
   create_release_prd:
     name: Create release
     if: ${{ (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref_name == 'main' }}
     permissions:
       contents: write
     runs-on: ubuntu-latest
-    needs: [docker, gitVersion]
+    needs: [docker, gitVersion, terraform_deploy_prd]
     steps:
       - name: Create release
         uses: mtnvencenzo/workflows/.github/actions/create-release@main

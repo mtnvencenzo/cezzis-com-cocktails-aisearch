@@ -1,0 +1,22 @@
+apiVersion: argocd-image-updater.argoproj.io/v1alpha1
+kind: ImageUpdater
+metadata:
+  name: cezzis-com-cocktails-aisearch-updater
+  namespace: argocd
+spec:
+  applicationRefs:
+    - namePattern: "cezzis-com-cocktails-aisearch"
+      commonUpdateSettings:
+        updateStrategy: "semver"
+        forceUpdate: true
+      images:
+        - alias: "cezziscomcocktailsaisearch"
+          imageName: "acrveceusgloshared001.azurecr.io/cezziscomcocktailsaisearch:0.x"
+          manifestTargets:
+            kustomize:
+              name: "acrveceusgloshared001.azurecr.io/cezziscomcocktailsaisearch"
+  writeBackConfig:
+    method: "git:secret:argocd/git-creds"
+    gitConfig:
+      branch: main
+      writeBackTarget: kustomization
