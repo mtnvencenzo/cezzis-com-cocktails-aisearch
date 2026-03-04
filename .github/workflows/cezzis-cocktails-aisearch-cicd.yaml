@@ -6,7 +6,7 @@ on:
     paths: [
       src/cezzis_com_cocktails_aisearch/**,
       test/**,
-      .github/workflows/cezzis-cocktails-aisearch-cicd.yaml
+      .github/workflows/cezzis-cocktails-aisearch-cicd.yaml,
       .iac/terraform/**
     ]
   push:
@@ -14,7 +14,7 @@ on:
     paths: [
       src/cezzis_com_cocktails_aisearch/**,
       test/**,
-      .github/workflows/cezzis-cocktails-aisearch-cicd.yaml
+      .github/workflows/cezzis-cocktails-aisearch-cicd.yaml,
       .iac/terraform/**
     ]
 
