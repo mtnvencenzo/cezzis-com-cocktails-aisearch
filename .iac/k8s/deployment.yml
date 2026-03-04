@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cezzis-com-cocktails-aisearch
+  namespace: cezzis
+  labels:
+    app: cezzis-com-cocktails-aisearch
+    app.kubernetes.io/part-of: cezzis
+    app.kubernetes.io/managed-by: argocd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cezzis-com-cocktails-aisearch
+  template:
+    metadata:
+      labels:
+        app: cezzis-com-cocktails-aisearch
+        app.kubernetes.io/part-of: cezzis
+        app.kubernetes.io/managed-by: argocd
+      annotations:
+        dapr.io/enabled: "false"
+    spec:
+      imagePullSecrets:
+        - name: acr-pull-secret
+      containers:
+        - name: cezzis-com-cocktails-aisearch
+          image: acrveceusgloshared001.azurecr.io/cezziscomcocktailsaisearch
+          ports:
+            - containerPort: 8010
+              name: http
+              protocol: TCP
+          envFrom:
+            - configMapRef:
+                name: cezzis-com-cocktails-aisearch-config
+            - secretRef:
+                name: cezzis-com-cocktails-aisearch-secrets
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8010
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8010
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

@@ -71,6 +71,9 @@ node_modules/
 # Local environment files
 **/.env.*
 
+# K8s secrets (never commit plaintext secrets)
+.iac/k8s/secret.yml
+
 # Python virtual host environments
 /**/.venv/
 **/pytest-results.xml
