@@ -7,6 +7,7 @@ on:
       src/cezzis_com_cocktails_aisearch/**,
       test/**,
       .github/workflows/cezzis-cocktails-aisearch-cicd.yaml
+      .iac/terraform/**
     ]
   push:
     branches: [main]
@@ -14,6 +15,7 @@ on:
       src/cezzis_com_cocktails_aisearch/**,
       test/**,
       .github/workflows/cezzis-cocktails-aisearch-cicd.yaml
+      .iac/terraform/**
     ]
 
   workflow_dispatch:
@@ -95,7 +97,7 @@ jobs:
       backend_storage_account_name: stveceusterraformstat001
       backend_container_name: terraform-cocktails
       backend_blob_key: cocktails/prd-cocktails-aisearch.tfstate
-      command_line_args: '-var image_tag=${{ github.sha }}'
+      # command_line_args: '-var image_tag=${{ github.sha }}'
     secrets:
       arm_client_secret: ${{ secrets.ARM_CLIENT_SECRET }}
       terraform_module_repo_access_key_secret: ${{ secrets.TERRAFORM_MODULE_REPO_ACCESS_KEY_SECRET }}
