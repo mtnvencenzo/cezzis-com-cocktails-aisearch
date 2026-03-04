@@ -1,5 +1,5 @@
 resource "azurerm_key_vault_secret" "cocktails_aisearch_tei_embeddings_apikey" {
-  name         = "cocktails-aisearch-tei-embeddings-apikey"
+  name         = "cocktails-aisearch-tei-embeddings-api-key"
   value        = "n/a"
   key_vault_id = data.azurerm_key_vault.cocktails_keyvault.id
 
@@ -11,7 +11,7 @@ resource "azurerm_key_vault_secret" "cocktails_aisearch_tei_embeddings_apikey" {
 }
 
 resource "azurerm_key_vault_secret" "cocktails_aisearch_tei_reranker_apikey" {
-  name         = "cocktails-aisearch-tei-reranker-apikey"
+  name         = "cocktails-aisearch-tei-reranker-api-key"
   value        = "n/a"
   key_vault_id = data.azurerm_key_vault.cocktails_keyvault.id
 
@@ -23,7 +23,7 @@ resource "azurerm_key_vault_secret" "cocktails_aisearch_tei_reranker_apikey" {
 }
 
 resource "azurerm_key_vault_secret" "cocktails_aisearch_tei_splade_apikey" {
-  name         = "cocktails-aisearch-tei-splade-apikey"
+  name         = "cocktails-aisearch-tei-splade-api-key"
   value        = "n/a"
   key_vault_id = data.azurerm_key_vault.cocktails_keyvault.id
 
