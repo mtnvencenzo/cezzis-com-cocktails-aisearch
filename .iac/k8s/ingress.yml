@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cezzis-aisearch-ingress
+  namespace: cezzis
+  labels:
+    app.kubernetes.io/part-of: cezzis
+  annotations:
+    # k3s uses Traefik by default
+    kubernetes.io/ingress.class: traefik
+spec:
+  rules:
+    - host: cezzis-aisearch.127.0.0.1.sslip.io
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: cezzis-aisearch
+                port:
+                  number: 8010
