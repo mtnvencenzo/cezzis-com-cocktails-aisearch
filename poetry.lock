@@ -2004,14 +2004,14 @@ orjson = ">=3.11.5"
 
 [[package]]
 name = "langsmith"
-version = "0.7.11"
+version = "0.7.13"
 description = "Client library to connect to the LangSmith Observability and Evaluation Platform."
 optional = false
 python-versions = ">=3.10"
 groups = ["main"]
 files = [
-    {file = "langsmith-0.7.11-py3-none-any.whl", hash = "sha256:0aff5b4316341d6ab6bcb6abf405a6a098f469020bad4889cafb6098650b8603"},
-    {file = "langsmith-0.7.11.tar.gz", hash = "sha256:71df5fb9fa1ee0d3b494c14393566d33130739656de5ef96486bcbb0b5e4d329"},
+    {file = "langsmith-0.7.13-py3-none-any.whl", hash = "sha256:0aeba8dff8b02476893ab37108d79af94b268bbaa40505f84fc9a5ebd326550f"},
+    {file = "langsmith-0.7.13.tar.gz", hash = "sha256:9a9223e683158216d158f5a2f2ed6a9a5cf9e40bc66677e8a1402f48f1094013"},
 ]
 
 [package.dependencies]
@@ -2595,14 +2595,14 @@ files = [
 
 [[package]]
 name = "openai"
-version = "2.24.0"
+version = "2.26.0"
 description = "The official Python library for the openai API"
 optional = false
 python-versions = ">=3.9"
 groups = ["main"]
 files = [
-    {file = "openai-2.24.0-py3-none-any.whl", hash = "sha256:fed30480d7d6c884303287bde864980a4b137b60553ffbcf9ab4a233b7a73d94"},
-    {file = "openai-2.24.0.tar.gz", hash = "sha256:1e5769f540dbd01cb33bc4716a23e67b9d695161a734aff9c5f925e2bf99a673"},
+    {file = "openai-2.26.0-py3-none-any.whl", hash = "sha256:6151bf8f83802f036117f06cc8a57b3a4da60da9926826cc96747888b57f394f"},
+    {file = "openai-2.26.0.tar.gz", hash = "sha256:b41f37c140ae0034a6e92b0c509376d907f3a66109935fba2c1b471a7c05a8fb"},
 ]
 
 [package.dependencies]
@@ -4089,14 +4089,14 @@ files = [
 
 [[package]]
 name = "scalar-fastapi"
-version = "1.7.0"
+version = "1.8.0"
 description = "This plugin provides an easy way to render a beautiful API reference based on a OpenAPI/Swagger file with FastAPI."
 optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "scalar_fastapi-1.7.0-py3-none-any.whl", hash = "sha256:df4508d59b66f41dbc219c6c89608fca2f2c8a9b59b44ad7870bfa0889ce4bc7"},
-    {file = "scalar_fastapi-1.7.0.tar.gz", hash = "sha256:7c5a68206c1ddfed58137f6ee92c7298b1ad89686c33b654cc85febc93242295"},
+    {file = "scalar_fastapi-1.8.0-py3-none-any.whl", hash = "sha256:80b573efbc9e9c2a7dc82ffc90e41538def213f862717793ea6ea894de75d955"},
+    {file = "scalar_fastapi-1.8.0.tar.gz", hash = "sha256:326e23becdd02d02e063751b27ee55855468d18f6bc2e1a0fe3d7c96d6e74265"},
 ]
 
 [[package]]
