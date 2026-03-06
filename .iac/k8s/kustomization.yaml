@@ -5,6 +5,7 @@ resources:
   - external-secrets.yml
   - deployment.yml
   - service.yml
+  - ingress.yml
 images:
   - name: acrveceusgloshared001.azurecr.io/cezziscomcocktailsaisearch
     newTag: latest
