@@ -3,20 +3,18 @@ name: cicd-cezzis-cocktails-aisearch
 on:
   pull_request:
     branches: [main]
-    paths: [
-      src/cezzis_com_cocktails_aisearch/**,
-      test/**,
-      .github/workflows/cezzis-cocktails-aisearch-cicd.yaml,
-      .iac/terraform/**
-    ]
+    paths-ignore:
+      - '.iac/**'
+      - '.github/**'
+      - '.vscode/**'
+      - '.assets/**'
   push:
     branches: [main]
-    paths: [
-      src/cezzis_com_cocktails_aisearch/**,
-      test/**,
-      .github/workflows/cezzis-cocktails-aisearch-cicd.yaml,
-      .iac/terraform/**
-    ]
+    paths-ignore:
+      - '.iac/**'
+      - '.github/**'
+      - '.vscode/**'
+      - '.assets/**'
 
   workflow_dispatch:
 
