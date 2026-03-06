@@ -449,4 +449,4 @@ docker run -p 8010:8010 --env-file .env cezzis-cocktails-aisearch
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under a Proprietary Software License. See the [LICENSE](LICENSE) file for details.
