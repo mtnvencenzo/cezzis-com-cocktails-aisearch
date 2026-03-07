@@ -34,9 +34,9 @@ spec:
             - configMapRef:
                 name: cezzis-com-cocktails-aisearch-config
             - secretRef:
-                name: cezzis-external-secrets
+                name: cezzis-com-cocktails-aisearch-secrets
             - secretRef:
-                name: shared-external-secrets
+                name: cezzis-com-cocktails-aisearch-shared-secrets
           readinessProbe:
             httpGet:
               path: /v1/health
