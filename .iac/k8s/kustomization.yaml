@@ -8,5 +8,5 @@ resources:
   - ingress.yml
 images:
   - name: acrveceusgloshared001.azurecr.io/cezziscomcocktailsaisearch
-    newTag: latest
+    newTag: 0.0.49
     newName: acrveceusgloshared001.azurecr.io/cezziscomcocktailsaisearch
