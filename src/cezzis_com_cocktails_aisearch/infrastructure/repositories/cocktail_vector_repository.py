@@ -380,8 +380,13 @@ class CocktailVectorRepository(ICocktailVectorRepository):
                 if next_offset is None:
                     break
 
-            # Cache the results
-            self._cocktails_cache = list(cocktails_dict.values())
-            self.logger.info(f"Cached {len(self._cocktails_cache)} cocktails")
+            # Cache the results only if non-empty, so a temporarily empty
+            # collection doesn't permanently poison the cache
+            cocktails_list = list(cocktails_dict.values())
+            if cocktails_list:
+                self._cocktails_cache = cocktails_list
+                self.logger.info(f"Cached {len(cocktails_list)} cocktails")
+            else:
+                self.logger.warning("No cocktails found to cache")
 
-            return self._cocktails_cache
+            return cocktails_list
