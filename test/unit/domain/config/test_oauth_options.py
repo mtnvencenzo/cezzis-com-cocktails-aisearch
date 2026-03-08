@@ -1,8 +1,6 @@
 import os
 from unittest.mock import patch
 
-import pytest
-
 from cezzis_com_cocktails_aisearch.domain.config.oauth_options import (
     OAuthOptions,
     clear_oauth_options_cache,

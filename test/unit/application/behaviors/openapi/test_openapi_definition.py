@@ -1,7 +1,6 @@
 import os
 from unittest.mock import MagicMock, patch
 
-import pytest
 from fastapi import FastAPI
 
 from cezzis_com_cocktails_aisearch.application.behaviors.openapi.openapi_definition import openapi_definition
