@@ -14,6 +14,7 @@ data:
   OAUTH_AUDIENCE: "https://cezzis-aisearch-api"
   OAUTH_CLIENT_ID: "HZXyiZxjHgkQqeb6UJxmikCGYpSz5iPb"
   OAUTH_ISSUER: "https://login.cezzis.com/"
+  OAUTH_PKCE: ""
   OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector.openobserve-platform.svc.cluster.local:4318"
   OTEL_SERVICE_NAME: "cocktails-aisearch"
   OTEL_SERVICE_NAMESPACE: "cezzis"

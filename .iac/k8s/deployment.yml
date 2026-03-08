@@ -9,6 +9,7 @@ metadata:
     app.kubernetes.io/managed-by: argocd
 spec:
   replicas: 1
+  revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: cezzis-com-cocktails-aisearch
@@ -41,7 +42,7 @@ spec:
             httpGet:
               path: /v1/health
               port: 8010
-            initialDelaySeconds: 10
+            initialDelaySeconds: 15
             periodSeconds: 10
             timeoutSeconds: 5
             failureThreshold: 3
@@ -49,7 +50,7 @@ spec:
             httpGet:
               path: /v1/health
               port: 8010
-            initialDelaySeconds: 15
+            initialDelaySeconds: 20
             periodSeconds: 20
             timeoutSeconds: 5
             failureThreshold: 3

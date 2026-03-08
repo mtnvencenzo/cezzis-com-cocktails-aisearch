@@ -23,6 +23,7 @@ class TestOAuthOptions:
             assert options.client_id == ""
             assert options.algorithms == ["RS256"]
             assert options.issuer == ""
+            assert options.pkce == "SHA-256"
 
     def test_oauth_options_init_with_env_vars(self):
         """Test OAuthOptions initialization with environment variables."""
@@ -33,6 +34,7 @@ class TestOAuthOptions:
                 "OAUTH_AUDIENCE": "api://cocktails",
                 "OAUTH_CLIENT_ID": "test-client-id",
                 "OAUTH_ISSUER": "https://auth.example.com/",
+                "OAUTH_PKCE": "SHA-256",
             },
         ):
             options = OAuthOptions()
@@ -41,6 +43,7 @@ class TestOAuthOptions:
             assert options.audience == "api://cocktails"
             assert options.client_id == "test-client-id"
             assert options.issuer == "https://auth.example.com/"
+            assert options.pkce == "SHA-256"
 
     def test_get_oauth_options_singleton(self):
         """Test that get_oauth_options returns a singleton instance."""

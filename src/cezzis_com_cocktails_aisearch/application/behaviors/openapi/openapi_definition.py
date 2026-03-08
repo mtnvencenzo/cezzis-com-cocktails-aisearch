@@ -79,7 +79,7 @@ def openapi_definition(app: FastAPI, oauth_options: OAuthOptions) -> dict:
         domain=oauth_options.domain,
         audience=oauth_options.audience,
         scopes={"write:embeddings": "Create and update cocktail embeddings"},
-        pkce="SHA-256",
+        pkce=oauth_options.pkce or None,
     )
 
     # Convert nullable types to OpenAPI 3.0.1 format

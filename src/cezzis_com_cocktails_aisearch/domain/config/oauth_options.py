@@ -17,6 +17,7 @@ class OAuthOptions(BaseSettings):
     client_id: str = Field(default="", validation_alias="OAUTH_CLIENT_ID")
     algorithms: list[str] = Field(default_factory=lambda: ["RS256"])
     issuer: str = Field(default="", validation_alias="OAUTH_ISSUER")
+    pkce: str = Field(default="SHA-256", validation_alias="OAUTH_PKCE")
 
 
 _logger: logging.Logger = logging.getLogger("oauth_options")

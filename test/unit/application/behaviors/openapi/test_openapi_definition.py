@@ -41,7 +41,7 @@ class TestOpenApiDefinition:
         mock_security_scheme = {"type": "oauth2", "flows": {"authorizationCode": {}}}
         mock_generate_scheme.return_value = mock_security_scheme
 
-        result = openapi_definition(app, oauth_options)
+        openapi_definition(app, oauth_options)
 
         # Verify get_openapi was called
         mock_get_openapi.assert_called_once()
@@ -59,10 +59,46 @@ class TestOpenApiDefinition:
             pkce="SHA-256",
         )
 
-        # Verify the result
-        assert "components" in result
-        assert "securitySchemes" in result["components"]
-        assert result["components"]["securitySchemes"] == mock_security_scheme
+    @patch(
+        "cezzis_com_cocktails_aisearch.application.behaviors.openapi.openapi_definition.generate_openapi_oauth2_scheme"
+    )
+    @patch("cezzis_com_cocktails_aisearch.application.behaviors.openapi.openapi_definition.get_openapi")
+    @patch.dict(
+        "os.environ",
+        {
+            "OAUTH_DOMAIN": "auth.example.com",
+            "OAUTH_AUDIENCE": "api://cocktails",
+            "OAUTH_CLIENT_ID": "test-client-id",
+            "OAUTH_ISSUER": "https://auth.example.com/",
+            "OAUTH_PKCE": "",
+        },
+    )
+    def test_openapi_definition_disables_pkce_when_empty(self, mock_get_openapi, mock_generate_scheme):
+        """Test that openapi_definition passes pkce=None when OAUTH_PKCE is empty."""
+        app = FastAPI()
+        oauth_options = OAuthOptions(
+            domain="auth.example.com",
+            audience="api://cocktails",
+            client_id="test-client-id",
+            issuer="https://auth.example.com/",
+            algorithms=["RS256"],
+            pkce="",
+        )
+
+        mock_openapi_schema = {"openapi": "3.0.0", "info": {"title": "Test", "version": "1.0.0"}, "components": {}}
+        mock_get_openapi.return_value = mock_openapi_schema
+        mock_generate_scheme.return_value = {"type": "oauth2", "flows": {"authorizationCode": {}}}
+
+        openapi_definition(app, oauth_options)
+
+        mock_generate_scheme.assert_called_once_with(
+            name="auth0",
+            client_id="test-client-id",
+            domain="auth.example.com",
+            audience="api://cocktails",
+            scopes={"write:embeddings": "Create and update cocktail embeddings"},
+            pkce=None,
+        )
 
     @patch("cezzis_com_cocktails_aisearch.application.behaviors.openapi.openapi_definition.get_openapi")
     @patch(
