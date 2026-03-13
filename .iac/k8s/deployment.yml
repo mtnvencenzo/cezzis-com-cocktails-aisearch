@@ -42,16 +42,16 @@ spec:
             httpGet:
               path: /v1/health
               port: 8010
-            initialDelaySeconds: 15
-            periodSeconds: 10
+            initialDelaySeconds: 30
+            periodSeconds: 300
             timeoutSeconds: 5
             failureThreshold: 3
           livenessProbe:
             httpGet:
               path: /v1/health
               port: 8010
-            initialDelaySeconds: 20
-            periodSeconds: 20
+            initialDelaySeconds: 40
+            periodSeconds: 300
             timeoutSeconds: 5
             failureThreshold: 3
           resources:
