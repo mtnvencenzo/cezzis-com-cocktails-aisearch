@@ -21,6 +21,7 @@ from cezzis_com_cocktails_aisearch.application.behaviors.error_handling import (
 from cezzis_com_cocktails_aisearch.application.behaviors.error_handling.exception_types import ProblemDetailsException
 from cezzis_com_cocktails_aisearch.application.behaviors.error_handling.problem_details import ProblemDetails
 from cezzis_com_cocktails_aisearch.application.behaviors.openapi.openapi_definition import openapi_definition
+from cezzis_com_cocktails_aisearch.application.behaviors.otel.probe_telemetry_filter import ProbeTelemetryMiddleware
 from cezzis_com_cocktails_aisearch.domain.config.app_options import AppOptions
 from cezzis_com_cocktails_aisearch.domain.config.oauth_options import OAuthOptions
 
@@ -52,6 +53,7 @@ app.exception_handler(ValidationError)(validation_exception_handler)
 app.exception_handler(Exception)(generic_exception_handler)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
+app.add_middleware(ProbeTelemetryMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=app_options.allowed_origins.replace(" ", "").split(",") if app_options.allowed_origins else ["*"],

@@ -3,6 +3,9 @@ from mediatr import Mediator
 from qdrant_client import QdrantClient
 
 from cezzis_com_cocktails_aisearch.application.concerns.health.queries.health_check_query import HealthCheckQueryHandler
+from cezzis_com_cocktails_aisearch.application.concerns.health.queries.readiness_check_query import (
+    ReadinessCheckQueryHandler,
+)
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.commands.cocktail_embedding_command import (
     CocktailEmbeddingCommandHandler,
 )
@@ -55,6 +58,7 @@ class AppModule(Module):
         binder.bind(FreeTextQueryHandler, FreeTextQueryHandler, scope=singleton)
         binder.bind(CocktailEmbeddingCommandHandler, CocktailEmbeddingCommandHandler, scope=singleton)
         binder.bind(HealthCheckQueryHandler, HealthCheckQueryHandler, scope=singleton)
+        binder.bind(ReadinessCheckQueryHandler, ReadinessCheckQueryHandler, scope=singleton)
 
 
 injector = create_injector()

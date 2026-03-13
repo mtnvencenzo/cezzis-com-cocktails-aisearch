@@ -40,18 +40,18 @@ spec:
                 name: cezzis-com-cocktails-aisearch-shared-secrets
           readinessProbe:
             httpGet:
-              path: /v1/health
+              path: /v1/readiness
               port: 8010
-            initialDelaySeconds: 30
-            periodSeconds: 300
-            timeoutSeconds: 5
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 30
             failureThreshold: 3
           livenessProbe:
             httpGet:
-              path: /v1/health
+              path: /v1/liveness
               port: 8010
-            initialDelaySeconds: 40
-            periodSeconds: 300
+            initialDelaySeconds: 15
+            periodSeconds: 15
             timeoutSeconds: 5
             failureThreshold: 3
           resources:

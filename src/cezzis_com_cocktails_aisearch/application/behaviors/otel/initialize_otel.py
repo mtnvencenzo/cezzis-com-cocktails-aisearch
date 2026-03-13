@@ -8,6 +8,7 @@ from cezzis_otel import OTelSettings, initialize_otel, shutdown_otel
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 
+from cezzis_com_cocktails_aisearch.application.behaviors.otel.probe_telemetry_filter import ProbeLoggingFilter
 from cezzis_com_cocktails_aisearch.domain.config import get_otel_options
 
 
@@ -50,6 +51,10 @@ def initialize_opentelemetry() -> None:
             None,
         )[-1],
     )
+
+    probe_filter = ProbeLoggingFilter()
+    for handler in logging.getLogger().handlers:
+        handler.addFilter(probe_filter)
 
     logger = logging.getLogger("initialize_otel")
     logger.info("OpenTelemetry initialized successfully")
