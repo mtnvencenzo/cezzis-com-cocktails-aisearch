@@ -1,6 +1,5 @@
 {
     "dotnet.defaultSolution": "disable",
-    "makefile.configureOnOpen": false,
     "rest-client.enableTelemetry": false,
     "yaml.schemas": {
         "https://raw.githubusercontent.com/GitTools/GitVersion/main/schemas/6.3/GitVersion.json": "GitVersion.yml"
@@ -33,9 +32,16 @@
     },
     "python-envs.defaultEnvManager": "ms-python.python:poetry",
     "python.testing.pytestArgs": [
-        "data_ingestion_agentic_workflow"
+        "test"
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
-    "python-envs.defaultPackageManager": "ms-python.python:poetry"
+    "python-envs.defaultPackageManager": "ms-python.python:poetry",
+    "[python]": {
+        "editor.defaultFormatter": "charliermarsh.ruff",
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        }
+    }
 }
