@@ -28,6 +28,7 @@ dependencies = [
     "cezzis-oauth (>=0.0.18,<1.0.0)",
     "cezzis-oauth-fastapi (>=0.0.21,<1.0.0)",
     "rapidfuzz (>=3.14.3,<4.0.0)",
+    "opentelemetry-instrumentation-fastapi (==0.59b0)",
 ]
 
 [tool.poetry]

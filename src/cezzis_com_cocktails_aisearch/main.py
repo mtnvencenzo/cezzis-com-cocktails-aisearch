@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.exceptions import HTTPException, RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from pydantic import ValidationError
 
 from cezzis_com_cocktails_aisearch.apis import (
@@ -21,7 +22,10 @@ from cezzis_com_cocktails_aisearch.application.behaviors.error_handling import (
 from cezzis_com_cocktails_aisearch.application.behaviors.error_handling.exception_types import ProblemDetailsException
 from cezzis_com_cocktails_aisearch.application.behaviors.error_handling.problem_details import ProblemDetails
 from cezzis_com_cocktails_aisearch.application.behaviors.openapi.openapi_definition import openapi_definition
-from cezzis_com_cocktails_aisearch.application.behaviors.otel.probe_telemetry_filter import ProbeTelemetryMiddleware
+from cezzis_com_cocktails_aisearch.application.behaviors.otel.probe_telemetry_filter import (
+    PROBE_PATHS,
+    ProbeTelemetryMiddleware,
+)
 from cezzis_com_cocktails_aisearch.domain.config.app_options import AppOptions
 from cezzis_com_cocktails_aisearch.domain.config.oauth_options import OAuthOptions
 
@@ -61,6 +65,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Instrument FastAPI for OpenTelemetry tracing, excluding health probe paths
+FastAPIInstrumentor.instrument_app(app, excluded_urls=",".join(PROBE_PATHS))
 
 app.include_router(injector.get(SemanticSearchRouter))
 app.include_router(injector.get(ScalarDocsRouter))
