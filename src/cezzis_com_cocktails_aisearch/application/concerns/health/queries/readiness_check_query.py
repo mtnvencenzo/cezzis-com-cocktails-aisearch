@@ -29,7 +29,7 @@ class ReadinessCheckQueryHandler:
             self._qdrant_client.get_collections()
             details["qdrant"] = "healthy"
         except Exception as exc:
-            self.logger.warning("Qdrant health check failed: %s", exc)
+            self.logger.exception("Qdrant health check failed: %s", exc)
             details["qdrant"] = "unhealthy"
             overall_healthy = False
 
