@@ -113,7 +113,8 @@ class TestFreeTextQueryHandler:
         assert result[1].title == "Mojito"
         # "tequila" now triggers base_spirit keyword filter
         call_kwargs = mock_repository.search_vectors.call_args[1]
-        assert call_kwargs["free_text"] == "tequila"
+        # Query expansion appends synonym terms for broader embedding recall
+        assert call_kwargs["free_text"].startswith("tequila")
         assert call_kwargs["query_filter"] is not None
         must_keys = {c.key for c in call_kwargs["query_filter"].must if isinstance(c, FieldCondition)}
         assert "metadata.keywords_base_spirit" in must_keys
@@ -1228,3 +1229,132 @@ class TestStripGenericDescriptors:
         """Test that stripping is case-insensitive."""
         result = FreeTextQueryHandler._strip_generic_descriptors("Caribbean COCKTAILS")
         assert result == "Caribbean"
+
+
+class TestExpandQuerySynonyms:
+    """Test cases for _expand_query_synonyms."""
+
+    def setup_method(self):
+        """Reset cached synonym expansions before each test to ensure fresh load."""
+        FreeTextQueryHandler._synonym_expansions = None
+
+    def test_expands_nightcap_with_synonyms(self):
+        """Test that 'nightcap' query gets expanded with relevant terms."""
+        result = FreeTextQueryHandler._expand_query_synonyms("nightcap")
+        assert result.startswith("nightcap")
+        assert "warm" in result or "strong" in result or "digestif" in result
+
+    def test_expands_tiki_with_tropical_terms(self):
+        """Test that 'tiki' triggers cocktail family expansion."""
+        result = FreeTextQueryHandler._expand_query_synonyms("tiki")
+        assert result.startswith("tiki")
+        assert "tropical" in result or "rum" in result
+
+    def test_expands_spirit_terms(self):
+        """Test that spirit names expand with related terms."""
+        result = FreeTextQueryHandler._expand_query_synonyms("bourbon")
+        assert result.startswith("bourbon")
+        assert "whiskey" in result or "old fashioned" in result
+
+    def test_no_expansion_for_unknown_terms(self):
+        """Test that a query with no matching triggers is returned unchanged."""
+        result = FreeTextQueryHandler._expand_query_synonyms("xyzzy foobar")
+        assert result == "xyzzy foobar"
+
+    def test_does_not_duplicate_existing_words(self):
+        """Test that words already in the query are not appended again."""
+        result = FreeTextQueryHandler._expand_query_synonyms("tropical rum")
+        words = result.split()
+        # Check no word appears more than once (case-insensitive)
+        lower_words = [w.lower() for w in words]
+        for w in lower_words:
+            assert lower_words.count(w) == 1, f"Duplicate word found: {w}"
+
+    def test_caps_at_max_expansion_terms(self):
+        """Test that expansion is capped at _MAX_EXPANSION_TERMS."""
+        # 'negroni' triggers multiple categories (family, spirit via 'gin') so
+        # many synonyms are candidates — verify the cap is applied.
+        result = FreeTextQueryHandler._expand_query_synonyms("negroni")
+        # Count how many words were added beyond the original
+        original_word_count = len("negroni".split())
+        total_word_count = len(result.split())
+        added = total_word_count - original_word_count
+        assert added <= FreeTextQueryHandler._MAX_EXPANSION_TERMS
+
+    def test_preserves_original_text(self):
+        """Test that the original query text is always preserved at the start."""
+        result = FreeTextQueryHandler._expand_query_synonyms("beach party drinks")
+        assert result.startswith("beach party drinks")
+
+    def test_empty_string_returns_empty(self):
+        """Test that empty input returns empty output."""
+        result = FreeTextQueryHandler._expand_query_synonyms("")
+        assert result == ""
+
+    def test_intent_expansion_brunch(self):
+        """Test that 'brunch' query gets intent-based expansion."""
+        result = FreeTextQueryHandler._expand_query_synonyms("brunch")
+        assert result.startswith("brunch")
+        # Should include brunch-related terms
+        expanded_terms = result.split()[1:]  # Skip original word
+        assert len(expanded_terms) > 0
+
+    def test_ingredient_expansion_mint(self):
+        """Test that 'mint' triggers ingredient expansion."""
+        result = FreeTextQueryHandler._expand_query_synonyms("mint")
+        assert result.startswith("mint")
+        assert "refreshing" in result or "mojito" in result or "julep" in result
+
+    def test_flavor_expansion_smokey(self):
+        """Test that 'smokey' triggers flavor expansion."""
+        result = FreeTextQueryHandler._expand_query_synonyms("smokey")
+        assert result.startswith("smokey")
+        assert "smoky" in result or "mezcal" in result or "islay" in result
+
+    def test_multiple_triggers_combine(self):
+        """Test that multiple matching triggers combine their expansions."""
+        result = FreeTextQueryHandler._expand_query_synonyms("summer tiki")
+        assert result.startswith("summer tiki")
+        expanded_terms = result.split()[2:]  # Skip original words
+        # Both 'summer' and 'tiki' should contribute terms
+        assert len(expanded_terms) > 0
+
+    def test_expansion_does_not_alter_reranker_query(self):
+        """Test that the expansion method returns a string starting with the original,
+        confirming the reranker can use the original text separately."""
+        original = "old fashioned"
+        expanded = FreeTextQueryHandler._expand_query_synonyms(original)
+        assert expanded.startswith(original)
+        # Expanded version should have additional terms
+        assert len(expanded) > len(original)
+
+
+class TestLoadSynonymExpansions:
+    """Test cases for _load_synonym_expansions."""
+
+    def setup_method(self):
+        """Reset cached synonym expansions before each test."""
+        FreeTextQueryHandler._synonym_expansions = None
+
+    def test_loads_json_file_successfully(self):
+        """Test that the JSON file loads and contains expected categories."""
+        data = FreeTextQueryHandler._load_synonym_expansions()
+        assert isinstance(data, dict)
+        assert "intent_expansions" in data
+        assert "cocktail_family_expansions" in data
+        assert "spirit_expansions" in data
+        assert "ingredient_expansions" in data
+        assert "flavor_expansions" in data
+        assert "occasion_expansions" in data
+
+    def test_excludes_metadata_keys(self):
+        """Test that keys starting with '_' are excluded from loaded data."""
+        data = FreeTextQueryHandler._load_synonym_expansions()
+        for key in data:
+            assert not key.startswith("_"), f"Metadata key '{key}' should be excluded"
+
+    def test_caches_after_first_load(self):
+        """Test that the synonym data is cached after the first load."""
+        data1 = FreeTextQueryHandler._load_synonym_expansions()
+        data2 = FreeTextQueryHandler._load_synonym_expansions()
+        assert data1 is data2  # Same object reference = cached

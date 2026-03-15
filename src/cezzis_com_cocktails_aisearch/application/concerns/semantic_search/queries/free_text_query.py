@@ -1,5 +1,7 @@
+import json
 import logging
 import re
+from importlib import resources
 from typing import Optional
 
 from injector import inject
@@ -227,6 +229,12 @@ class FreeTextQueryHandler:
     # that have these words in their actual name (e.g., "Millionaire Cocktail").
     _GENERIC_DESCRIPTOR_WORDS: set[str] = {"cocktail", "cocktails", "drink", "drinks", "recipe", "recipes"}
 
+    # Maximum number of synonym terms to append to a query
+    _MAX_EXPANSION_TERMS: int = 8
+
+    # Loaded once from static/query_synonym_expansions.json
+    _synonym_expansions: dict[str, dict[str, list[str]]] | None = None
+
     @inject
     def __init__(
         self,
@@ -265,9 +273,14 @@ class FreeTextQueryHandler:
         # (e.g., "Millionaire Cocktail", "Champagne Cocktail").
         vector_search_text = self._strip_generic_descriptors(command.free_text)
 
+        # Expand query with domain-specific synonyms to broaden embedding recall.
+        # The expanded text is only used for the vector search (dense + SPLADE);
+        # the reranker always sees the original cleaned text for precise ranking.
+        expanded_search_text = self._expand_query_synonyms(vector_search_text)
+
         # Semantic search with Qdrant-native filtering
         cocktails = await self.cocktail_vector_repository.search_vectors(
-            free_text=vector_search_text,
+            free_text=expanded_search_text,
             query_filter=query_filter,
         )
 
@@ -430,6 +443,71 @@ class FreeTextQueryHandler:
         cleaned = [w for w in words if w.lower().strip(",.!?;:") not in FreeTextQueryHandler._GENERIC_DESCRIPTOR_WORDS]
         result = " ".join(cleaned).strip()
         return result if result else text
+
+    @classmethod
+    def _load_synonym_expansions(cls) -> dict[str, dict[str, list[str]]]:
+        """Load synonym expansions from static/query_synonym_expansions.json.
+
+        Loaded once and cached as a class-level attribute.
+        """
+        if cls._synonym_expansions is not None:
+            return cls._synonym_expansions
+
+        try:
+            ref = resources.files("cezzis_com_cocktails_aisearch.static").joinpath("query_synonym_expansions.json")
+            data = json.loads(ref.read_text(encoding="utf-8"))
+            # Strip metadata keys
+            cls._synonym_expansions = {k: v for k, v in data.items() if isinstance(v, dict) and not k.startswith("_")}
+        except Exception:
+            logging.getLogger("free_text_query_handler").warning(
+                "Failed to load query_synonym_expansions.json, query expansion disabled",
+                exc_info=True,
+            )
+            cls._synonym_expansions = {}
+
+        return cls._synonym_expansions
+
+    @classmethod
+    def _expand_query_synonyms(cls, text: str) -> str:
+        """Expand the search query with domain-specific synonyms to broaden recall.
+
+        Appends relevant synonym terms to the query text so the embedding model
+        generates a vector in a richer neighborhood. Only appends terms — never
+        removes or replaces the original query words.
+        """
+        expansions_data = cls._load_synonym_expansions()
+        if not expansions_data:
+            return text
+
+        text_lower = text.strip().lower()
+        query_words = set(text_lower.split())
+        all_expansions: list[str] = []
+
+        for _category, mappings in expansions_data.items():
+            for trigger, synonyms in mappings.items():
+                if trigger in text_lower:
+                    new_terms = [s for s in synonyms if s not in text_lower]
+                    all_expansions.extend(new_terms)
+
+        if not all_expansions:
+            return text
+
+        # Deduplicate while preserving order, skip words already in the query
+        seen = set(query_words)
+        unique_expansions: list[str] = []
+        for term in all_expansions:
+            term_lower = term.lower()
+            if term_lower not in seen:
+                unique_expansions.append(term)
+                seen.add(term_lower)
+
+        # Cap to avoid diluting the embedding vector
+        unique_expansions = unique_expansions[: cls._MAX_EXPANSION_TERMS]
+
+        if not unique_expansions:
+            return text
+
+        return f"{text} {' '.join(unique_expansions)}"
 
     # --- Fuzzy matching helpers for misspelling tolerance ---
 
