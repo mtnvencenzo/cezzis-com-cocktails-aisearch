@@ -12,8 +12,8 @@ from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.c
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_keywords import (
     CocktailSearchKeywords,
 )
-from cezzis_com_cocktails_aisearch.infrastructure.repositories.icocktail_vector_repository import (
-    ICocktailVectorRepository,
+from cezzis_com_cocktails_aisearch.infrastructure.repositories.icocktail_vector_embedding_repository import (
+    ICocktailVectorEmbeddingRepository,
 )
 
 
@@ -50,7 +50,7 @@ class CocktailEmbeddingCommandValidator:
 @Mediator.handler
 class CocktailEmbeddingCommandHandler:
     @inject
-    def __init__(self, cocktail_vector_repository: ICocktailVectorRepository):
+    def __init__(self, cocktail_vector_repository: ICocktailVectorEmbeddingRepository):
         self.cocktail_vector_repository = cocktail_vector_repository
         self.logger = logging.getLogger("cocktail_embedding_command_handler")
 

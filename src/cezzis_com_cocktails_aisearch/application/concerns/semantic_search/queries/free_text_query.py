@@ -12,8 +12,8 @@ from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.c
 )
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailSearchModel
 from cezzis_com_cocktails_aisearch.domain.config.qdrant_options import QdrantOptions
-from cezzis_com_cocktails_aisearch.infrastructure.repositories.icocktail_vector_repository import (
-    ICocktailVectorRepository,
+from cezzis_com_cocktails_aisearch.infrastructure.repositories.icocktail_vector_search_repository import (
+    ICocktailVectorSearchRepository,
 )
 from cezzis_com_cocktails_aisearch.infrastructure.services.ireranker_service import IRerankerService
 
@@ -230,7 +230,7 @@ class FreeTextQueryHandler:
     @inject
     def __init__(
         self,
-        cocktail_vector_repository: ICocktailVectorRepository,
+        cocktail_vector_repository: ICocktailVectorSearchRepository,
         qdrant_opotions: QdrantOptions,
         reranker_service: IRerankerService,
     ):

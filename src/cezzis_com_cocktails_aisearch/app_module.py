@@ -16,8 +16,10 @@ from cezzis_com_cocktails_aisearch.domain.config.hugging_face_options import Hug
 from cezzis_com_cocktails_aisearch.domain.config.reranker_options import RerankerOptions, get_reranker_options
 from cezzis_com_cocktails_aisearch.domain.config.splade_options import SpladeOptions, get_splade_options
 from cezzis_com_cocktails_aisearch.infrastructure.repositories import (
-    CocktailVectorRepository,
-    ICocktailVectorRepository,
+    CocktailVectorEmbeddingRepository,
+    CocktailVectorSearchRepository,
+    ICocktailVectorEmbeddingRepository,
+    ICocktailVectorSearchRepository,
 )
 from cezzis_com_cocktails_aisearch.infrastructure.services.ireranker_service import IRerankerService
 from cezzis_com_cocktails_aisearch.infrastructure.services.isplade_service import ISpladeService
@@ -46,7 +48,8 @@ class AppModule(Module):
         )
 
         binder.bind(Mediator, Mediator(handler_class_manager=mediator_manager), scope=singleton)
-        binder.bind(ICocktailVectorRepository, CocktailVectorRepository, scope=singleton)
+        binder.bind(ICocktailVectorEmbeddingRepository, CocktailVectorEmbeddingRepository, scope=singleton)
+        binder.bind(ICocktailVectorSearchRepository, CocktailVectorSearchRepository, scope=singleton)
         binder.bind(IRerankerService, RerankerService, scope=singleton)
         binder.bind(ISpladeService, SpladeService, scope=singleton)
         binder.bind(AppOptions, get_app_options(), scope=singleton)
