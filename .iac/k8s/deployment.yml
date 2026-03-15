@@ -41,7 +41,7 @@ spec:
           startupProbe:
             httpGet:
               path: v1/readiness
-              port: 8016
+              port: 8010
             initialDelaySeconds: 5
             periodSeconds: 5
             timeoutSeconds: 30
