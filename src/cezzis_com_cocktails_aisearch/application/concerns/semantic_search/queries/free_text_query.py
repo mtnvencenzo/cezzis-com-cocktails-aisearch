@@ -510,7 +510,6 @@ class FreeTextQueryHandler:
         return f"{text} {' '.join(unique_expansions)}"
 
     # --- Fuzzy matching helpers for misspelling tolerance ---
-
     def _fuzzy_word_match(self, word: str, target: str, threshold: int = 80) -> bool:
         """Check if two words fuzzy-match. Uses exact match for short targets (<5 chars)
         to avoid false positives with words like 'gin', 'rum', 'rye', 'no', 'dry'."""
