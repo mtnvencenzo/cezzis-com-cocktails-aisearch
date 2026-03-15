@@ -1,3 +1,4 @@
+import logging
 from typing import cast
 
 from cezzis_oauth_fastapi import (
@@ -42,6 +43,7 @@ class EmbeddingRouter(APIRouter):
                 security=[{"auth0": ["write:embeddings"]}],
             ),
         )
+        self.logger = logging.getLogger("embedding_router")
 
     @apim_host_key_authorization
     @oauth_authorization(scopes=["write:embeddings"], config_provider=get_oauth_options)
@@ -53,15 +55,31 @@ class EmbeddingRouter(APIRouter):
         """
         Performs a semantic search for cocktails based on a free text query.
         """
-        command = CocktailEmbeddingCommand(
-            chunks=body.content_chunks,
-            cocktail_embedding_model=body.cocktail_embedding_model,
-            cocktail_keywords=body.cocktail_keywords,
+
+        embedding_result = False
+
+        try:
+            command = CocktailEmbeddingCommand(
+                chunks=body.content_chunks,
+                cocktail_embedding_model=body.cocktail_embedding_model,
+                cocktail_keywords=body.cocktail_keywords,
+            )
+
+            embedding_result = cast(bool, await self.mediator.send_async(command))  # casting due to type hinting issues
+
+            if not embedding_result:
+                raise InternalServerErrorException(detail="Failed to embed cocktail description chunks")
+
+        except Exception as e:
+            self.logger.exception(
+                "Processing cocktail embedding request finished",
+                exc_info=e,
+                extra={"cocktail_id": body.cocktail_embedding_model.id},
+            )
+            raise
+
+        self.logger.info(
+            "Processing cocktail embedding request finished", extra={"cocktail_id": body.cocktail_embedding_model.id}
         )
 
-        embedding_result = cast(bool, await self.mediator.send_async(command))  # casting due to type hinting issues
-
-        if embedding_result:
-            return Response(status_code=204)
-
-        raise InternalServerErrorException(detail="Failed to embed cocktail description chunks")
+        return Response(status_code=204)
