@@ -155,6 +155,7 @@ class TestCocktailVectorEmbeddingRepository:
         assert "keywords_occasion" in metadata
         assert "keywords_mood" in metadata
         assert "keywords_search_terms" in metadata
+        assert "keywords_search_words" in metadata
 
     @pytest.mark.anyio
     async def test_store_vectors_raises_on_empty_dense_embeddings(self):

@@ -127,6 +127,9 @@ class CocktailVectorEmbeddingRepository(ICocktailVectorEmbeddingRepository):
                 "keywords_occasion": keywords.keywords_occasion,
                 "keywords_mood": keywords.keywords_mood,
                 "keywords_search_terms": keywords.keywords_search_terms,
+                "keywords_search_words": list(
+                    {word.lower() for term in keywords.keywords_search_terms for word in term.split() if len(word) >= 3}
+                ),
             }
 
             sparse_indices, sparse_values = sparse_vectors[i] if i < len(sparse_vectors) else ([], [])

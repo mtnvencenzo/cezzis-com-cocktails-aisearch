@@ -46,6 +46,10 @@ class CocktailSearchModel(BaseModel):
     glassware: List[CocktailSearchGlasswareTypeModel] = Field(
         ..., description="List of glassware types used for the cocktail", examples=["rocks", "coupe", "cocktailGlass"]
     )
+    keywords_search_terms: List[str] = Field(
+        default_factory=list,
+        exclude=True,
+    )
     search_statistics: CocktailSearchStatistics = Field(
         default_factory=lambda: CocktailSearchStatistics(
             total_score=0.0,

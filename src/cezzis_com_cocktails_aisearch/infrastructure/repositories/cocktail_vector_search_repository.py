@@ -98,6 +98,7 @@ class CocktailVectorSearchRepository(ICocktailVectorSearchRepository):
                         cocktailModel: CocktailSearchModel = CocktailSearchModel.model_validate_json(
                             metadata.get("model")
                         )
+                        cocktailModel.keywords_search_terms = metadata.get("keywords_search_terms", [])
                         cocktailModel.search_statistics = CocktailSearchStatistics(
                             total_score=score,
                             max_score=score,

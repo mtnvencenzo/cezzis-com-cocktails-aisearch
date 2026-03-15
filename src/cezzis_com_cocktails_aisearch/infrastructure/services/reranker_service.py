@@ -132,4 +132,7 @@ class RerankerService(IRerankerService):
             if ingredient_names:
                 parts.append("Ingredients: " + ", ".join(ingredient_names))
 
+        if cocktail.keywords_search_terms:
+            parts.append("Tags: " + ", ".join(cocktail.keywords_search_terms))
+
         return ". ".join(parts)

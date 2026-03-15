@@ -1358,3 +1358,104 @@ class TestLoadSynonymExpansions:
         data1 = FreeTextQueryHandler._load_synonym_expansions()
         data2 = FreeTextQueryHandler._load_synonym_expansions()
         assert data1 is data2  # Same object reference = cached
+
+
+class TestExtractSearchTermWords:
+    """Test cases for _extract_search_term_words."""
+
+    def setup_method(self):
+        """Reset cached synonym expansions before each test."""
+        FreeTextQueryHandler._synonym_expansions = None
+
+    def test_extracts_hangover_trigger(self):
+        """Test that 'hangover' matches the intent expansion trigger."""
+        result = FreeTextQueryHandler._extract_search_term_words("hangover")
+        assert "hangover" in result
+
+    def test_extracts_nightcap_trigger(self):
+        """Test that 'nightcap' matches the intent expansion trigger."""
+        result = FreeTextQueryHandler._extract_search_term_words("nightcap")
+        assert "nightcap" in result
+
+    def test_no_match_for_generic_words(self):
+        """Test that generic words like 'delicious' don't match any trigger."""
+        result = FreeTextQueryHandler._extract_search_term_words("delicious recipes")
+        assert result == []
+
+    def test_extracts_multi_word_trigger(self):
+        """Test that multi-word triggers like 'old fashioned' extract individual words."""
+        result = FreeTextQueryHandler._extract_search_term_words("old fashioned")
+        assert "old" in result
+        assert "fashioned" in result
+
+    def test_no_duplicates(self):
+        """Test that extracted words are not duplicated."""
+        result = FreeTextQueryHandler._extract_search_term_words("summer tiki bar")
+        # No word should appear more than once
+        assert len(result) == len(set(result))
+
+    def test_empty_string_returns_empty(self):
+        """Test that empty input returns empty list."""
+        result = FreeTextQueryHandler._extract_search_term_words("")
+        assert result == []
+
+
+class TestSearchWordsFilter:
+    """Test cases for keywords_search_words should filter in _build_query_filter."""
+
+    def _make_handler(self):
+        mock_repository = AsyncMock()
+        mock_qdrant_options = MagicMock()
+        mock_reranker = AsyncMock()
+        mock_reranker.rerank = AsyncMock(side_effect=lambda query, cocktails, top_k=10: cocktails)
+        return FreeTextQueryHandler(
+            cocktail_vector_repository=mock_repository,
+            qdrant_opotions=mock_qdrant_options,
+            reranker_service=mock_reranker,
+        )
+
+    def test_hangover_creates_should_filter(self):
+        """Test that 'hangover' creates a should filter on keywords_search_words."""
+        handler = self._make_handler()
+        result = handler._build_query_filter("hangover")
+        assert result is not None
+        assert result.should is not None
+        assert isinstance(result.should, list)
+        assert len(result.should) == 1
+        condition = result.should[0]
+        assert isinstance(condition, FieldCondition)
+        assert condition.key == "metadata.keywords_search_words"
+        assert isinstance(condition.match, MatchAny)
+        assert "hangover" in condition.match.any
+
+    def test_nightcap_creates_should_filter(self):
+        """Test that 'hangover cure' creates a should filter with multiple words."""
+        handler = self._make_handler()
+        # "hangover" is an intent expansion trigger but doesn't match any keyword filter
+        result = handler._build_query_filter("hangover cure")
+        assert result is not None
+        assert result.should is not None
+
+    def test_plain_query_no_trigger_returns_none(self):
+        """Test that a query not matching any trigger returns None."""
+        handler = self._make_handler()
+        result = handler._build_query_filter("delicious recipes")
+        assert result is None
+
+    def test_must_conditions_suppress_should(self):
+        """Test that when must conditions exist, should conditions are not added."""
+        handler = self._make_handler()
+        # "bourbon" triggers base_spirit must filter
+        result = handler._build_query_filter("bourbon")
+        assert result is not None
+        assert result.must is not None
+        assert result.should is None
+
+    def test_must_not_only_no_should(self):
+        """Test that must_not without must doesn't get should conditions for exclusion words."""
+        handler = self._make_handler()
+        result = handler._build_query_filter("without honey")
+        assert result is not None
+        assert result.must_not is not None
+        # 'without' and 'honey' shouldn't be expansion triggers
+        assert result.should is None

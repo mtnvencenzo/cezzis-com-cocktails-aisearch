@@ -429,3 +429,16 @@ class TestBuildDocumentText:
         parts = text.split(". ")
         assert parts[0] == "Margarita"
         assert len([p for p in parts if p == "Margarita"]) == 1
+
+    def test_cocktail_with_search_terms(self):
+        """Test document text includes keywords_search_terms as Tags."""
+        cocktail = create_test_cocktail_model("1", "Michelada")
+        cocktail.keywords_search_terms = ["hangover cure", "brunch", "beer cocktail"]
+        text = RerankerService._build_document_text(cocktail)
+        assert "Tags: hangover cure, brunch, beer cocktail" in text
+
+    def test_cocktail_without_search_terms(self):
+        """Test document text omits Tags section when no search terms."""
+        cocktail = create_test_cocktail_model("1", "Margarita")
+        text = RerankerService._build_document_text(cocktail)
+        assert "Tags:" not in text

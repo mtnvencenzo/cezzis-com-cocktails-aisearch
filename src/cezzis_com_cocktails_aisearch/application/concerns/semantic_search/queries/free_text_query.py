@@ -509,6 +509,32 @@ class FreeTextQueryHandler:
 
         return f"{text} {' '.join(unique_expansions)}"
 
+    @classmethod
+    def _extract_search_term_words(cls, search_text: str) -> list[str]:
+        """Extract query words that match synonym expansion triggers.
+
+        Returns words suitable for matching against the keywords_search_words
+        payload field in Qdrant. Only returns words that correspond to known
+        triggers in the synonym expansion map — this avoids false positives
+        on generic words like 'delicious' or 'amazing'.
+        """
+        expansions_data = cls._load_synonym_expansions()
+        if not expansions_data:
+            return []
+
+        text_lower = search_text.strip().lower()
+        matched_words: list[str] = []
+
+        for _category, mappings in expansions_data.items():
+            for trigger in mappings:
+                if trigger in text_lower:
+                    # Add individual words from the trigger phrase
+                    for word in trigger.split():
+                        if len(word) >= 3 and word not in matched_words:
+                            matched_words.append(word)
+
+        return matched_words
+
     # --- Fuzzy matching helpers for misspelling tolerance ---
 
     def _fuzzy_word_match(self, word: str, target: str, threshold: int = 80) -> bool:
@@ -559,6 +585,7 @@ class FreeTextQueryHandler:
         """
         must_conditions: list[Condition] = []
         must_not_conditions: list[Condition] = []
+        should_conditions: list[Condition] = []
 
         # IBA filter (check non-IBA first since "non-iba" contains "iba")
         if any(
@@ -689,9 +716,28 @@ class FreeTextQueryHandler:
         for term in excluded_terms:
             must_not_conditions.append(FieldCondition(key="metadata.ingredient_words", match=MatchValue(value=term)))
 
+        # Search-term soft matching for pure intent queries (e.g. "hangover", "nightcap").
+        # Only activates when no structured keyword filters matched (no must conditions),
+        # ensuring it acts as a fallback for unstructured intent queries.
+        # Uses should (OR) to surface cocktails whose curated search terms
+        # (e.g. "hangover cure", "tomato juice") match words in the user query.
+        # Only triggers for words that match synonym expansion triggers to avoid
+        # false positives on generic words like "delicious".
+        if not must_conditions:
+            intent_words = self._extract_search_term_words(search_text)
+            if intent_words:
+                should_conditions.append(
+                    FieldCondition(key="metadata.keywords_search_words", match=MatchAny(any=intent_words))
+                )
+
         if must_conditions or must_not_conditions:
             return Filter(
                 must=must_conditions if must_conditions else None,
+                must_not=must_not_conditions if must_not_conditions else None,
+            )
+        if should_conditions:
+            return Filter(
+                should=should_conditions,
                 must_not=must_not_conditions if must_not_conditions else None,
             )
         return None

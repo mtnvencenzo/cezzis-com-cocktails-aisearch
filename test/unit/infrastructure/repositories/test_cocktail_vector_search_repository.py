@@ -48,7 +48,13 @@ class TestCocktailVectorSearchRepository:
 
         mock_point = MagicMock()
         mock_point.score = 0.9
-        mock_point.payload = {"metadata": {"cocktail_id": "cocktail-123", "model": cocktail_json}}
+        mock_point.payload = {
+            "metadata": {
+                "cocktail_id": "cocktail-123",
+                "model": cocktail_json,
+                "keywords_search_terms": ["hangover cure", "brunch"],
+            }
+        }
 
         mock_search_results = MagicMock()
         mock_search_results.points = [mock_point]
@@ -75,6 +81,7 @@ class TestCocktailVectorSearchRepository:
         assert result[0].title == "Margarita"
         assert result[0].search_statistics is not None
         assert result[0].search_statistics.total_score == 0.9
+        assert result[0].keywords_search_terms == ["hangover cure", "brunch"]
 
         # Verify hybrid search was used (prefetch + RRF)
         call_kwargs = mock_qdrant_client.query_points.call_args[1]
