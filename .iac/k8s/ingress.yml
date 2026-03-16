@@ -6,6 +6,7 @@ metadata:
   labels:
     app.kubernetes.io/part-of: cezzis
   annotations:
+    argocd.argoproj.io/sync-wave: "500"
     # k3s uses Traefik by default
     kubernetes.io/ingress.class: traefik
 spec:

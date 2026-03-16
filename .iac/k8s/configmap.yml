@@ -6,6 +6,8 @@ metadata:
   labels:
     app.kubernetes.io/part-of: cezzis
     app.kubernetes.io/managed-by: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "100"
 data:
   ENV: "prd"
   COCKTAILS_AISEARCH_ALLOWED_ORIGINS: "http://localhost:4001,http://localhost:4002"
