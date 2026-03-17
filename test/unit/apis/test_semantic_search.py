@@ -40,9 +40,7 @@ class TestSemanticSearchRouter:
 
         request_mock = MagicMock()
 
-        result = await router.search(
-            _rq=request_mock, freetext="tequila", skip=0, take=10, m=None, m_ex=False, inc=None, fi=None
-        )
+        result = await router.search(_rq=request_mock, freetext="tequila", skip=0, take=10, m=None, m_ex=False, fi=None)
 
         assert isinstance(result, CocktailsSearchRs)
         assert len(result.items) == 2
@@ -60,7 +58,7 @@ class TestSemanticSearchRouter:
         request_mock = MagicMock()
 
         result = await router.search(
-            _rq=request_mock, freetext="nonexistent", skip=0, take=10, m=None, m_ex=False, inc=None, fi=None
+            _rq=request_mock, freetext="nonexistent", skip=0, take=10, m=None, m_ex=False, fi=None
         )
 
         assert isinstance(result, CocktailsSearchRs)
@@ -76,9 +74,7 @@ class TestSemanticSearchRouter:
 
         request_mock = MagicMock()
 
-        result = await router.search(
-            _rq=request_mock, freetext=None, skip=None, take=None, m=None, m_ex=None, inc=None, fi=None
-        )
+        result = await router.search(_rq=request_mock, freetext=None, skip=None, take=None, m=None, m_ex=None, fi=None)
 
         assert isinstance(result, CocktailsSearchRs)
         # Verify that defaults are applied in the query

@@ -9,9 +9,6 @@ from mediatr import GenericQuery, Mediator
 from qdrant_client.http.models import Condition, FieldCondition, Filter, MatchAny, MatchValue, Range
 from rapidfuzz import fuzz
 
-from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_data_include_model import (
-    CocktailSearchDataIncludeModel,
-)
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailSearchModel
 from cezzis_com_cocktails_aisearch.domain.config.qdrant_options import QdrantOptions
 from cezzis_com_cocktails_aisearch.infrastructure.repositories.icocktail_vector_search_repository import (
@@ -28,7 +25,6 @@ class FreeTextQuery(GenericQuery[list[tuple[str, float]]]):
         take: Optional[int] = 10,
         matches: Optional[list[str]] = [],
         match_exclusive: Optional[bool] = False,
-        include: Optional[list[CocktailSearchDataIncludeModel]] = [],
         filters: Optional[list[str]] = [],
     ):
         self.free_text = free_text
@@ -36,7 +32,6 @@ class FreeTextQuery(GenericQuery[list[tuple[str, float]]]):
         self.take = take
         self.matches = matches
         self.match_exclusive = match_exclusive
-        self.include = include
         self.filters = filters
 
 

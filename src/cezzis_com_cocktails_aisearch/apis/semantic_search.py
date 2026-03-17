@@ -8,9 +8,6 @@ from cezzis_com_cocktails_aisearch.application.behaviors.apim_host_key_authoriza
     apim_host_key_authorization,
 )
 from cezzis_com_cocktails_aisearch.application.behaviors.openapi import create_openapi_extra
-from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_data_include_model import (
-    CocktailSearchDataIncludeModel,
-)
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktail_model import CocktailSearchModel
 from cezzis_com_cocktails_aisearch.application.concerns.semantic_search.models.cocktails_search_rs import (
     CocktailsSearchRs,
@@ -57,9 +54,6 @@ class SemanticSearchRouter(APIRouter):
         m_ex: bool | None = Query(
             False, description="Whether or not the supplied matches must be exclusively returned"
         ),
-        inc: list[CocktailSearchDataIncludeModel] | None = Query(
-            None, description="The list of extension objects to include for each cocktail recipe"
-        ),
         fi: list[str] | None = Query(
             None, description="An optional list of filters to use when quering the cocktail recipes"
         ),
@@ -73,7 +67,6 @@ class SemanticSearchRouter(APIRouter):
             take=take or 10,
             matches=m or [],
             match_exclusive=m_ex or False,
-            include=inc or [],
             filters=fi or [],
         )
 

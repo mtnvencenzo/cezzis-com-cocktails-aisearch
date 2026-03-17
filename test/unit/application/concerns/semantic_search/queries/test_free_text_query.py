@@ -27,7 +27,6 @@ class TestFreeTextQuery:
         assert query.take == 10
         assert query.matches == []
         assert query.match_exclusive is False
-        assert query.include == []
         assert query.filters == []
 
     def test_query_init_with_custom_values(self):
@@ -38,7 +37,6 @@ class TestFreeTextQuery:
             take=20,
             matches=["margarita"],
             match_exclusive=True,
-            include=[],
             filters=["filter1"],
         )
 
