@@ -33,6 +33,17 @@ class FreeTextQuery(GenericQuery[list[tuple[str, float]]]):
         self.matches = matches
         self.match_exclusive = match_exclusive
         self.filters = filters
+        self.ingredient_groups: dict[str, list[str]] = {}
+
+        # Parse ingredient groups from filters
+        if filters:
+            for filter in filters:
+                # Parse out ingredient name from <group>-<ingredient-name>
+                parsed_group = filter.split("-", 1)[-1].strip().lower()
+                parsed_name = filter.strip().lower().removeprefix(parsed_group + "-")
+                if parsed_group not in self.ingredient_groups:
+                    self.ingredient_groups[parsed_group] = []
+                self.ingredient_groups[parsed_group].append(parsed_name.replace("-", " "))
 
 
 @Mediator.behavior
@@ -260,7 +271,7 @@ class FreeTextQueryHandler:
             return self._handle_short_query(search_text, all_cocktails, command)
 
         # Build Qdrant payload filter from structured query elements
-        query_filter = self._build_query_filter(search_text)
+        query_filter = self._build_query_filter(search_text, command.ingredient_groups)
 
         # Strip generic descriptor words ("cocktail", "cocktails", etc.) from the
         # vector search query. These add no semantic value for embeddings and cause
@@ -571,7 +582,7 @@ class FreeTextQueryHandler:
             return False
         return all(self._fuzzy_word_match(text_words[j], prefix_words[j], threshold) for j in range(len(prefix_words)))
 
-    def _build_query_filter(self, search_text: str) -> Filter | None:
+    def _build_query_filter(self, search_text: str, ingredient_filters: dict[str, list[str]]) -> Filter | None:
         """
         Build Qdrant payload filter from structured query elements.
 
@@ -581,6 +592,9 @@ class FreeTextQueryHandler:
         must_conditions: list[Condition] = []
         must_not_conditions: list[Condition] = []
         should_conditions: list[Condition] = []
+
+        if ingredient_filters:
+            must_conditions.append(self._build_ingredient_group_filter(ingredient_filters))
 
         # IBA filter (check non-IBA first since "non-iba" contains "iba")
         if any(
@@ -805,3 +819,16 @@ class FreeTextQueryHandler:
                     i += 1
 
         return terms
+
+    def _build_ingredient_group_filter(self, ingredient_groups: dict[str, list[str]]) -> Filter:
+        """
+        Build a Qdrant filter that matches cocktails containing all ingredients in any group.
+        """
+        group_filters = []
+        for group in ingredient_groups.values():
+            must_conditions: list[Condition] = [
+                FieldCondition(key="metadata.ingredient_names", match=MatchValue(value=ingredient.lower()))
+                for ingredient in group
+            ]
+            group_filters.append(Filter(must=must_conditions))
+        return Filter(should=group_filters)

@@ -360,13 +360,13 @@ class TestBuildQueryFilter:
     def test_returns_none_for_plain_query(self):
         """Test that a plain query without structured elements returns None."""
         handler = self._make_handler()
-        result = handler._build_query_filter("delicious recipes")
+        result = handler._build_query_filter("delicious recipes", {})
         assert result is None
 
     def test_iba_filter(self):
         """Test IBA filter detection."""
         handler = self._make_handler()
-        result = handler._build_query_filter("iba cocktail recipes")
+        result = handler._build_query_filter("iba cocktail recipes", {})
         assert result is not None
         assert isinstance(result.must, list)
         assert len(result.must) == 1
@@ -379,7 +379,7 @@ class TestBuildQueryFilter:
     def test_non_iba_filter(self):
         """Test non-IBA filter detection."""
         handler = self._make_handler()
-        result = handler._build_query_filter("non-iba cocktails")
+        result = handler._build_query_filter("non-iba cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         assert len(result.must) == 1
@@ -392,7 +392,7 @@ class TestBuildQueryFilter:
     def test_glassware_filter(self):
         """Test glassware filter detection."""
         handler = self._make_handler()
-        result = handler._build_query_filter("cocktails served in a coupe")
+        result = handler._build_query_filter("cocktails served in a coupe", {})
         assert result is not None
         assert isinstance(result.must, list)
         assert len(result.must) == 1
@@ -405,7 +405,7 @@ class TestBuildQueryFilter:
     def test_simple_ingredient_count_filter(self):
         """Test simple/easy ingredient count filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("simple cocktails")
+        result = handler._build_query_filter("simple cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         assert len(result.must) == 1
@@ -417,7 +417,7 @@ class TestBuildQueryFilter:
     def test_complex_ingredient_count_filter(self):
         """Test complex ingredient count filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("complex cocktails")
+        result = handler._build_query_filter("complex cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         assert len(result.must) == 1
@@ -429,7 +429,7 @@ class TestBuildQueryFilter:
     def test_numeric_ingredient_count_filter(self):
         """Test numeric ingredient count filter (e.g., '3 ingredient')."""
         handler = self._make_handler()
-        result = handler._build_query_filter("3 ingredient cocktails")
+        result = handler._build_query_filter("3 ingredient cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         assert len(result.must) == 1
@@ -442,7 +442,7 @@ class TestBuildQueryFilter:
     def test_prep_time_filter(self):
         """Test quick/fast prep time filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("quick cocktails")
+        result = handler._build_query_filter("quick cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         assert len(result.must) == 1
@@ -454,7 +454,7 @@ class TestBuildQueryFilter:
     def test_serves_filter(self):
         """Test serves filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("cocktail serves 2")
+        result = handler._build_query_filter("cocktail serves 2", {})
         assert result is not None
         assert isinstance(result.must, list)
         assert len(result.must) == 1
@@ -467,7 +467,7 @@ class TestBuildQueryFilter:
     def test_exclusion_filter(self):
         """Test ingredient exclusion via must_not."""
         handler = self._make_handler()
-        result = handler._build_query_filter("cocktails without honey")
+        result = handler._build_query_filter("cocktails without honey", {})
         assert result is not None
         assert result.must_not is not None
         assert isinstance(result.must_not, list)
@@ -481,7 +481,7 @@ class TestBuildQueryFilter:
     def test_combined_filters(self):
         """Test that multiple filter conditions combine correctly."""
         handler = self._make_handler()
-        result = handler._build_query_filter("simple iba cocktails without honey")
+        result = handler._build_query_filter("simple iba cocktails without honey", {})
         assert result is not None
         # Should have IBA + ingredient_count in must
         assert isinstance(result.must, list)
@@ -501,7 +501,7 @@ class TestBuildQueryFilter:
     def test_inclusion_does_not_create_hard_filter(self):
         """Test that 'with honey' does NOT create a hard must filter (vector search handles inclusion)."""
         handler = self._make_handler()
-        result = handler._build_query_filter("cocktails with honey")
+        result = handler._build_query_filter("cocktails with honey", {})
         # No hard ingredient inclusion filter — vector search handles positive matching semantically
         if result is not None and isinstance(result.must, list):
             inclusion_conditions = [
@@ -512,7 +512,7 @@ class TestBuildQueryFilter:
     def test_exclusion_still_works_without_inclusion(self):
         """Test that 'without honey' still creates exclusion filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("cocktails without honey")
+        result = handler._build_query_filter("cocktails without honey", {})
         assert result is not None
         # Must should not have ingredient_words inclusion
         if isinstance(result.must, list):
@@ -528,7 +528,7 @@ class TestBuildQueryFilter:
     def test_exclusion_only_from_combined_query(self):
         """Test that 'with lime without honey' only creates exclusion, not inclusion."""
         handler = self._make_handler()
-        result = handler._build_query_filter("cocktails with lime without honey")
+        result = handler._build_query_filter("cocktails with lime without honey", {})
         assert result is not None
         # No ingredient inclusion in must
         if isinstance(result.must, list):
@@ -753,7 +753,7 @@ class TestKeywordMetadataFilters:
     def test_base_spirit_gin_filter(self):
         """Test that 'gin' triggers base_spirit filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("gin cocktails")
+        result = handler._build_query_filter("gin cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         must_keys = {c.key for c in result.must if isinstance(c, FieldCondition)}
@@ -767,7 +767,7 @@ class TestKeywordMetadataFilters:
     def test_base_spirit_bourbon_filter(self):
         """Test that 'bourbon' triggers base_spirit filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("bourbon cocktails")
+        result = handler._build_query_filter("bourbon cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         spirit_condition = next(
@@ -779,7 +779,7 @@ class TestKeywordMetadataFilters:
     def test_flavor_profile_filter(self):
         """Test that flavor keywords trigger flavor_profile filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("bitter cocktails")
+        result = handler._build_query_filter("bitter cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         must_keys = {c.key for c in result.must if isinstance(c, FieldCondition)}
@@ -788,7 +788,7 @@ class TestKeywordMetadataFilters:
     def test_cocktail_family_filter(self):
         """Test that cocktail family keywords trigger filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("tiki cocktails")
+        result = handler._build_query_filter("tiki cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         must_keys = {c.key for c in result.must if isinstance(c, FieldCondition)}
@@ -797,7 +797,7 @@ class TestKeywordMetadataFilters:
     def test_technique_shaken_filter(self):
         """Test that 'shaken' triggers technique filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("shaken cocktails")
+        result = handler._build_query_filter("shaken cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         technique_condition = next(
@@ -809,7 +809,7 @@ class TestKeywordMetadataFilters:
     def test_technique_stirred_filter(self):
         """Test that 'stirred' triggers technique filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("stirred drinks")
+        result = handler._build_query_filter("stirred drinks", {})
         assert result is not None
         assert isinstance(result.must, list)
         technique_condition = next(
@@ -821,7 +821,7 @@ class TestKeywordMetadataFilters:
     def test_strength_filter(self):
         """Test that strength keywords trigger filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("strong cocktails")
+        result = handler._build_query_filter("strong cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         strength_condition = next(
@@ -833,7 +833,7 @@ class TestKeywordMetadataFilters:
     def test_temperature_filter(self):
         """Test that temperature keywords trigger filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("frozen cocktails")
+        result = handler._build_query_filter("frozen cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         temp_condition = next(
@@ -845,7 +845,7 @@ class TestKeywordMetadataFilters:
     def test_season_filter(self):
         """Test that season keywords trigger filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("summer cocktails")
+        result = handler._build_query_filter("summer cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         season_condition = next(
@@ -857,7 +857,7 @@ class TestKeywordMetadataFilters:
     def test_season_autumn_maps_to_fall(self):
         """Test that 'autumn' is normalized to 'fall'."""
         handler = self._make_handler()
-        result = handler._build_query_filter("autumn cocktails")
+        result = handler._build_query_filter("autumn cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         season_condition = next(
@@ -869,7 +869,7 @@ class TestKeywordMetadataFilters:
     def test_occasion_filter(self):
         """Test that occasion keywords trigger filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("brunch cocktails")
+        result = handler._build_query_filter("brunch cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         occasion_condition = next(
@@ -881,7 +881,7 @@ class TestKeywordMetadataFilters:
     def test_mood_filter(self):
         """Test that mood keywords trigger filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("refreshing cocktails")
+        result = handler._build_query_filter("refreshing cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         mood_condition = next(
@@ -893,7 +893,7 @@ class TestKeywordMetadataFilters:
     def test_combined_keyword_filters(self):
         """Test that multiple keyword dimensions combine correctly."""
         handler = self._make_handler()
-        result = handler._build_query_filter("refreshing gin summer cocktails")
+        result = handler._build_query_filter("refreshing gin summer cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         must_keys = {c.key for c in result.must if isinstance(c, FieldCondition)}
@@ -1008,7 +1008,7 @@ class TestFuzzyFilterMisspellings:
     def test_misspelled_bourbon_triggers_spirit_filter(self):
         """Test that 'bourbn' fuzzy-matches 'bourbon' in base spirit filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("bourbn cocktails")
+        result = handler._build_query_filter("bourbn cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         spirit_condition = next(
@@ -1022,7 +1022,7 @@ class TestFuzzyFilterMisspellings:
     def test_misspelled_shaken_triggers_technique_filter(self):
         """Test that 'shakn' fuzzy-matches 'shaken' in technique filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("shakn cocktails")
+        result = handler._build_query_filter("shakn cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         technique_condition = next(
@@ -1036,7 +1036,7 @@ class TestFuzzyFilterMisspellings:
     def test_misspelled_refreshing_triggers_mood_filter(self):
         """Test that 'refrashing' fuzzy-matches 'refreshing' in mood filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("refrashing cocktails")
+        result = handler._build_query_filter("refrashing cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         mood_condition = next(
@@ -1050,7 +1050,7 @@ class TestFuzzyFilterMisspellings:
     def test_misspelled_contemporary_triggers_non_iba(self):
         """Test that 'contemparary' fuzzy-matches 'contemporary' for non-IBA filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("contemparary cocktails")
+        result = handler._build_query_filter("contemparary cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         iba_condition = next(
@@ -1064,7 +1064,7 @@ class TestFuzzyFilterMisspellings:
     def test_misspelled_simple_triggers_ingredient_count(self):
         """Test that 'simle' fuzzy-matches 'simple' for ingredient count filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("simle cocktails")
+        result = handler._build_query_filter("simle cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         count_condition = next(
@@ -1078,7 +1078,7 @@ class TestFuzzyFilterMisspellings:
     def test_misspelled_frozen_triggers_temperature(self):
         """Test that 'frozn' fuzzy-matches 'frozen' for temperature filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("frozn cocktails")
+        result = handler._build_query_filter("frozn cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         temp_condition = next(
@@ -1092,7 +1092,7 @@ class TestFuzzyFilterMisspellings:
     def test_misspelled_summer_triggers_season(self):
         """Test that 'sumer' fuzzy-matches 'summer' for season filter."""
         handler = self._make_handler()
-        result = handler._build_query_filter("sumer cocktails")
+        result = handler._build_query_filter("sumer cocktails", {})
         assert result is not None
         assert isinstance(result.must, list)
         season_condition = next(
@@ -1106,7 +1106,7 @@ class TestFuzzyFilterMisspellings:
     def test_short_keyword_gin_not_fuzzy_matched(self):
         """Test that short keywords like 'gin' (3 chars) are NOT fuzzy matched — exact only."""
         handler = self._make_handler()
-        result = handler._build_query_filter("gn cocktails")
+        result = handler._build_query_filter("gn cocktails", {})
         # "gn" should NOT fuzzy-match "gin" since gin < 5 chars
         if result is not None and isinstance(result.must, list):
             spirit_conditions = [
@@ -1415,7 +1415,7 @@ class TestSearchWordsFilter:
     def test_hangover_creates_should_filter(self):
         """Test that 'hangover' creates a should filter on keywords_search_words."""
         handler = self._make_handler()
-        result = handler._build_query_filter("hangover")
+        result = handler._build_query_filter("hangover", {})
         assert result is not None
         assert result.should is not None
         assert isinstance(result.should, list)
@@ -1430,21 +1430,21 @@ class TestSearchWordsFilter:
         """Test that 'hangover cure' creates a should filter with multiple words."""
         handler = self._make_handler()
         # "hangover" is an intent expansion trigger but doesn't match any keyword filter
-        result = handler._build_query_filter("hangover cure")
+        result = handler._build_query_filter("hangover cure", {})
         assert result is not None
         assert result.should is not None
 
     def test_plain_query_no_trigger_returns_none(self):
         """Test that a query not matching any trigger returns None."""
         handler = self._make_handler()
-        result = handler._build_query_filter("delicious recipes")
+        result = handler._build_query_filter("delicious recipes", {})
         assert result is None
 
     def test_must_conditions_suppress_should(self):
         """Test that when must conditions exist, should conditions are not added."""
         handler = self._make_handler()
         # "bourbon" triggers base_spirit must filter
-        result = handler._build_query_filter("bourbon")
+        result = handler._build_query_filter("bourbon", {})
         assert result is not None
         assert result.must is not None
         assert result.should is None
@@ -1452,7 +1452,7 @@ class TestSearchWordsFilter:
     def test_must_not_only_no_should(self):
         """Test that must_not without must doesn't get should conditions for exclusion words."""
         handler = self._make_handler()
-        result = handler._build_query_filter("without honey")
+        result = handler._build_query_filter("without honey", {})
         assert result is not None
         assert result.must_not is not None
         # 'without' and 'honey' shouldn't be expansion triggers
