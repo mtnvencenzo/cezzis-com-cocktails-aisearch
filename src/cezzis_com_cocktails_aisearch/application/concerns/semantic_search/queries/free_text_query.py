@@ -593,7 +593,7 @@ class FreeTextQueryHandler:
         must_not_conditions: list[Condition] = []
         should_conditions: list[Condition] = []
 
-        if ingredient_filters:
+        if ingredient_filters and len(ingredient_filters) > 0:
             must_conditions.append(self._build_ingredient_group_filter(ingredient_filters))
 
         # IBA filter (check non-IBA first since "non-iba" contains "iba")
