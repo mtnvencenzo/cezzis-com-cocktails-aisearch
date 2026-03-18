@@ -833,9 +833,9 @@ class FreeTextQueryHandler:
         """
         group_filters = []
         for group in ingredient_groups.values():
-            must_conditions: list[Condition] = [
+            should_conditions: list[Condition] = [
                 FieldCondition(key="metadata.ingredient_names", match=MatchValue(value=ingredient.lower()))
                 for ingredient in group
             ]
-            group_filters.append(Filter(must=must_conditions))
-        return Filter(should=group_filters)
+            group_filters.append(Filter(should=should_conditions))
+        return Filter(must=group_filters)
