@@ -38,9 +38,16 @@ class FreeTextQuery(GenericQuery[list[tuple[str, float]]]):
         # Parse ingredient groups from filters
         if filters:
             for filter in filters:
+                if not filter or "-" not in filter:
+                    continue
                 # Parse out ingredient name from <group>-<ingredient-name>
-                parsed_group = filter.split("-", 1)[-1].strip().lower()
+                parsed_group = filter.split("-", 1)[0].strip().lower()
+                if not parsed_group:
+                    continue
                 parsed_name = filter.strip().lower().removeprefix(parsed_group + "-")
+                if not parsed_name:
+                    continue
+
                 if parsed_group not in self.ingredient_groups:
                     self.ingredient_groups[parsed_group] = []
                 self.ingredient_groups[parsed_group].append(parsed_name.replace("-", " "))
